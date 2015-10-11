@@ -26,27 +26,27 @@ Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
 Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
 Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
 psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
-nPts = 100;                     % number of frequency steps
+nFreqs = 100;                   % number of frequency steps
 df=6.1035e3;                    % frequency step size [Hz]
 nModes=12;
 
 %%
 nPlies = size(NomMat,2);        % Number of plies
-N=ones(nPlies,1)*10;            % vector with number of nodes per layer 
-Ntot=3*sum(N);                  % total number of modes
-Nmax=3*sum(N);                  % max number of modes????   
+Nodes=ones(nPlies,1)*10;        % vector with the number of nodes per layer 
+nNodes=3*sum(Nodes);            % total number of nodes in laminate x 3 components of displacement
+nMax=3*sum(Nodes);              % max number of modes????   
 H=ones(nPlies,1)*h;             % vector of ply thicknesses
 
 %% NORMALIZATION PARAMETERS
 Ca = 1e11;              % Pa = N/m^2 normalization parameter
-rhoa = 1e3;             % kg/m^3
+rhoa = 1e3;             % kg/m^3 second normalization parameter 
 dw = 2*pi*df;           % Angular frequency step
 htot=sum(H);            % Total thickness of the plate
-k = zeros(Nmax,nPts);
-Un = zeros(Ntot,Nmax,nPts);
+k = zeros(nMax,nFreqs);
+Un = zeros(nNodes,nMax,nFreqs);
 
 %% PREPARE PARTIAL MATRICES
-freq=nan(nPts,1);       % Initialize the frequency vector
+freq=nan(nFreqs,1);       % Initialize the frequency vector
 rho0=nan(nPlies,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
@@ -63,13 +63,13 @@ CC=nan(3,3,nPlies);
 ABC=nan(3,3,nPlies);
 A2=nan(3,3,nPlies);
 
-%% LOAD AND STACK THE MATERIAL PROPERTIES FOR PLIES
+%% LOAD AND STACK THE MATERIAL PROPERTIES FOR PLIES AND STROH MATRIX
 for ply = 1:nPlies
     Matp = LoadElasticConstants(fullfile('./Materials',strcat(NomMat{ply},'.dat')));
-    C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply));
-    C = C./Ca;                  % stiffness tensor rotated to principal axis (of anisotropy)
+    C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
+    C = C./Ca;                  % normalization of stiffness tensor 
     rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
-    F11(1,1) = C(1,1);      % F11 matrix component for building Stroh matrix
+    F11(1,1) = C(1,1);          % F11 matrix component for building Stroh matrix
     F11(1,2) = C(1,6);
     F11(1,3) = C(1,5);
     F11(2,1) = C(1,6);
@@ -142,23 +142,21 @@ end
 
 %% CALCULATION LOOP
 tic;
-parfor_progress(nPts); % Initialize 
-parfor kk = 0:nPts-1
+% parfor_progress(nFreqs); % Initialize the parfor progress bar
+for kk = 0:nFreqs-1
     w = dw+dw*kk;
     freq(kk+1) = w/(2*pi);
     ka = w*sqrt(rhoa/Ca);
-    F1 = zeros(Ntot,Ntot);
-    G1 = zeros(Ntot,Ntot);
-    H1 = zeros(Ntot,Ntot);
+    F1 = zeros(nNodes,nNodes);
+    G1 = zeros(nNodes,nNodes);
+    H1 = zeros(nNodes,nNodes);
     Ntemp = 1;
-    % Développement sur une base de polynômes de Legendre d'ordre N(ii) pour la
-    % couche ii = 1 à NCouche
-    for ply = 1:nPlies
-        As = zeros(3*(N(ply)-2),3*N(ply));
-        Bs = zeros(3*(N(ply)-2),3*N(ply));
-        Cs = zeros(3*(N(ply)-2),3*N(ply));
-        for mm=0:N(ply)-3
-            for nn=0:N(ply)-1
+    for ply = 1:nPlies      % Preparation of the computational values from Legendre polynomials
+        As = zeros(3*(Nodes(ply)-2),3*Nodes(ply));
+        Bs = zeros(3*(Nodes(ply)-2),3*Nodes(ply));
+        Cs = zeros(3*(Nodes(ply)-2),3*Nodes(ply));
+        for mm=0:Nodes(ply)-3
+            for nn=0:Nodes(ply)-1
                 Bs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2/H(ply)*BB(:,:,ply)/ka*PmdPn(mm,nn); 
                 Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 4/(H(ply)^2)*CC(:,:,ply)/ka^2*Pmd2Pn(mm,nn);
                 if (mm == nn)
@@ -167,89 +165,86 @@ parfor kk = 0:nPts-1
                 end
             end
         end          
-        H1(Ntemp:Ntemp+3*(N(ply)-2)-1,3*sum(N(1:ply-1))+1:3*sum(N(1:ply))) = As;
-        F1(Ntemp:Ntemp+3*(N(ply)-2)-1,3*sum(N(1:ply-1))+1:3*sum(N(1:ply))) = Bs;
-        G1(Ntemp:Ntemp+3*(N(ply)-2)-1,3*sum(N(1:ply-1))+1:3*sum(N(1:ply))) = Cs;
-        Ntemp = Ntemp+3*(N(ply)-2);
+        H1(Ntemp:Ntemp+3*(Nodes(ply)-2)-1,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = As;
+        F1(Ntemp:Ntemp+3*(Nodes(ply)-2)-1,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = Bs;
+        G1(Ntemp:Ntemp+3*(Nodes(ply)-2)-1,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = Cs;
+        Ntemp = Ntemp+3*(Nodes(ply)-2);
     end
 
-% Conditions de continuité entre les couches ii et ii+1
+    % Conditions of continuity between plies - ply and ply+1
     for ply = 1:nPlies-1
         % Continuité des déplacements entre les couches ii et ii+1
-        Ds = zeros(3,3*N(ply+1));
-        Es = zeros(3,3*N(ply));
-        for nn=0:N(ply)-1
+        Ds = zeros(3,3*Nodes(ply+1));
+        Es = zeros(3,3*Nodes(ply));
+        for nn=0:Nodes(ply)-1
             Es(:,3*nn+1:3*(nn+1)) = eye(3);
         end
-        for nn=0:N(ply+1)-1
+        for nn=0:Nodes(ply+1)-1
             Ds(:,3*nn+1:3*(nn+1)) = -(-1)^nn*eye(3);
         end
 
-        G1(Ntemp:Ntemp+2,3*sum(N(1:ply-1))+1:3*sum(N(1:ply))) = Es;
-        G1(Ntemp:Ntemp+2,3*sum(N(1:ply))+1:3*sum(N(1:ply+1))) = Ds;
+        G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = Es;
+        G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply))+1:3*sum(Nodes(1:ply+1))) = Ds;
 
         Ntemp = Ntemp+3; 
 
         % Continuité des contraintes normales entre les couches ii et
         % ii+1
-        Ds = zeros(3,3*N(ply));
-        Es = zeros(3,3*N(ply));
-        Dp = zeros(3,3*N(ply+1));
-        Ep = zeros(3,3*N(ply+1));
-        for nn=0:N(ply)-1
+        Ds = zeros(3,3*Nodes(ply));
+        Es = zeros(3,3*Nodes(ply));
+        Dp = zeros(3,3*Nodes(ply+1));
+        Ep = zeros(3,3*Nodes(ply+1));
+        for nn=0:Nodes(ply)-1
             Ds(:,3*nn+1:3*(nn+1)) = -ABC(:,:,ply);
             Es(:,3*nn+1:3*(nn+1)) = 2/H(ply)*F33(:,:,ply)/ka*nn*(nn+1)/2;
         end
-        for nn=0:N(ply+1)-1
+        for nn=0:Nodes(ply+1)-1
             Dp(:,3*nn+1:3*(nn+1)) = ABC(:,:,ply+1)*(-1)^nn;
             Ep(:,3*nn+1:3*(nn+1)) = -2/H(ply+1)*F33(:,:,ply+1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
         end
-        F1(Ntemp:Ntemp+2,3*sum(N(1:ply-1))+1:3*sum(N(1:ply))) = Ds;
-        F1(Ntemp:Ntemp+2,3*sum(N(1:ply))+1:3*sum(N(1:ply+1))) = Dp;
-        G1(Ntemp:Ntemp+2,3*sum(N(1:ply-1))+1:3*sum(N(1:ply))) = Es;
-        G1(Ntemp:Ntemp+2,3*sum(N(1:ply))+1:3*sum(N(1:ply+1))) = Ep;
+        F1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = Ds;
+        F1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply))+1:3*sum(Nodes(1:ply+1))) = Dp;
+        G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = Es;
+        G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply))+1:3*sum(Nodes(1:ply+1))) = Ep;
 
         Ntemp = Ntemp+3;            
     end
 
-    % Conditions aux limites sur la surface basse
-    Ds = zeros(3,3*N(1));
-    Es = zeros(3,3*N(1));
-    for nn=0:N(1)-1
+    % Boundary conditions at the lower interface
+    Ds = zeros(3,3*Nodes(1));
+    Es = zeros(3,3*Nodes(1));
+    for nn=0:Nodes(1)-1
         Ds(:,3*nn+1:3*(nn+1)) = ABC(:,:,1)*(-1)^nn;
         Es(:,3*nn+1:3*(nn+1)) = -2/h(1)*F33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
     end
-    F1(Ntemp:Ntemp+2,1:3*N(1)) = Ds;
-    G1(Ntemp:Ntemp+2,1:3*N(1)) = Es;        
+    F1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Ds;
+    G1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Es;        
 
     Ntemp = Ntemp+3;
 
-    % Conditions aux limites sur la surface haute
-    Dp = zeros(3,3*N(nPlies));
-    Ep = zeros(3,3*N(nPlies));
-    for nn=0:N(nPlies)-1
+    % Boundary conditions at the upper interface
+    Dp = zeros(3,3*Nodes(nPlies));
+    Ep = zeros(3,3*Nodes(nPlies));
+    for nn=0:Nodes(nPlies)-1
         Dp(:,3*nn+1:3*(nn+1)) = -ABC(:,:,nPlies);
         Ep(:,3*nn+1:3*(nn+1)) = 2/H(nPlies)*F33(:,:,nPlies)/ka*nn*(nn+1)/2;
     end
-    F1(Ntemp:Ntemp+2,3*sum(N(1:nPlies-1))+1:3*sum(N(1:nPlies))) = Dp;
-    G1(Ntemp:Ntemp+2,3*sum(N(1:nPlies-1))+1:3*sum(N(1:nPlies))) = Ep;
+    F1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Dp;
+    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Ep;
 
-    % Calcul des valeurs propres (modes) de la structure
-    M1 = [F1 -eye(Ntot);-H1 zeros(Ntot)];
-    M2 = [G1 zeros(Ntot);zeros(Ntot) eye(Ntot)];
-
+    % Calculation of the proper values (modes)
+    M1 = [F1 -eye(nNodes);-H1 zeros(nNodes)];
+    M2 = [G1 zeros(nNodes);zeros(nNodes) eye(nNodes)];
     [Z1,K] = eig(M1,M2);
-
-    kp = zeros(2*Ntot,1);
-    for ply=1:2*Ntot
+    kp = zeros(2*nNodes,1);
+    for ply=1:2*nNodes
         if (K(ply,ply) == 0)
             kp(ply) = NaN;
         else
             kp(ply) = i/K(ply,ply)*ka;
         end
     end
-
-    for ply=1:2*Ntot
+    for ply=1:2*nNodes
         if (real(kp(ply)) == 0)
             kp(ply) = NaN;
         else
@@ -260,11 +255,11 @@ parfor kk = 0:nPts-1
     end
 
     [interm, Ind] = sort(kp);
-    k(:,kk+1) = interm(1:Nmax);
-    Un(:,:,kk+1) = Z1(1:Ntot,Ind(1:Nmax));
-    parfor_progress;
+    k(:,kk+1) = interm(1:nMax);
+    Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
+%     parfor_progress;
 end
-parfor_progress(0);
+% parfor_progress(0);
 toc;
 
 %% ADJUST THE UNITS
