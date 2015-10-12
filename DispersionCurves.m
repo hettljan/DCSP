@@ -4,34 +4,27 @@
 clear all
 
 %%
-% NomMat = {'Plexiglass'};
-% h = 8e-3*ones(size(NomMat,2),1);     % Thickness of the ply in [m]
-% NPlies = length(h);                     % Number of plies
-% phi = [0]; % First Euler angle
-% theta = [0];                       % Second Euler angle
-% psi = [0];                 % Third Euler angle
-% N = [10];
-% Ntot = 3*sum(N);           % Total number of modes
-% Nmax = 3*sum(N);           % Max number of modes????        
-% psip = 0;
-% Npts = 655;                % Number of frequency steps
-% df=1.2207e3;                   %  frequency step
-% nModes=15;
+NomMat = {'Plexiglass'};
+h = 8e-3;                   % Thickness of the ply in [m]
+Phi = [0];                  % First Euler angle
+Theta = [0];                % Second Euler angle
+Psi = [0];                  % Third Euler angle
+psip=0;
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
-NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
-    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
-Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
-h=0.23e-3;                      % Thickness of the ply in [m]
-psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
-nFreqs = 100;                   % number of frequency steps
-df=6.1035e3;                    % frequency step size [Hz]
-nModes=12;
-legDeg=10;                      % degree of Legendre polynomial expansion
+% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
+%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
+% Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+% Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
+% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
+% h=0.23e-3;                      % Thickness of the ply in [m]
+% psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
 
 %%
+nFreqs = 50;                   % number of frequency steps
+df=6.1035e3;                    % frequency step size [Hz]
+nModes=12;                      % number of mode to be tracked
+legDeg=10;                      % degree of Legendre polynomial expansion
 nPlies = size(NomMat,2);        % Number of plies
 Nodes=ones(nPlies,1)*legDeg;    % vector with the number of nodes/order of polynomial expansion  per layer 
 nNodes=3*sum(Nodes);            % total number of nodes in laminate x 3 components of displacement
@@ -47,7 +40,7 @@ k = zeros(nMax,nFreqs);
 Un = zeros(nNodes,nMax,nFreqs);
 
 %% PREPARE PARTIAL MATRICES
-freq=nan(nFreqs,1);       % Initialize the frequency vector
+freq=nan(nFreqs,1);     % Initialize the frequency vector
 rho0=nan(nPlies,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
