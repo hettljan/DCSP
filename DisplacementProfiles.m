@@ -1,52 +1,49 @@
-% LambAnisotropic3DLegendre_U
-% Calcul analytique des courbes de dispersion
-% dans des matériaux multicouches avec prise en compte
-% des effets piézoélectriques et piézomagnétiques
-%
-% Distribution spatiale pour un mode
-%
-% Méthode de Legendre pour les NPlies couches
-% Conditions aux limites "approchées" sur les deux surfaces
-%
+% Calculates the displacements for layered anisotropic materials using
+% the Legendre and Laguerre polynomial approach
+% Originally supplied by O. Bou-Matar, Lille
 clear all
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
 NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' ...
-    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-h = ones(size(NomMat,2),1)*0.23e-3;        % Thickness of the ply in [m]
-NPlies = length(h);                     % Number of plies
+    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};            
+Phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+Theta = [0 0 0 0 0 0 0 0 0 0 0 0];                       % second euler angle
+Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                         % third euler angle
+h=0.23e-3;                              % Thickness of the ply in [m]
+psip = 0;                               % propagation direction with respect to the main in-plane coordinate axis 
 freq = 300e3;                           % Frequency to be investigated
-w = 2*pi*freq;                          % Angular frequency
-NMode = 2;
-N = [10 10 10 10 10 10 10 10 10 10 10 10];
-phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-theta = [0 0 0 0 0 0 0 0 0 0 0 0];
-psi = [0 0 0 0 0 0 0 0 0 0 0 0];
-Ntot = 3*sum(N);
-Nmax = 3*sum(N);
-psip = 0;
-Npts = 100;
+mMode = 2;                              % ?
+Npts = 100;                             % ?
+legDeg=10;                              % Legendre polynomial degree                      
 
-%% Parametres de normalisation
-Ca = 1e11; % Pa = N/m^2
-rhoa = 1e3; % kg/m^3
-htot = sum(h);
+%% ADDITIONAL VARIABLES
+Nodes = ones(nPlies,1)*legDeg;          % vector of degrees of polynomial expansions in different plies
+nPlies = size(NomMat,2);                % number of plies
+H = ones(size(NomMat,2),1)*h;           % vector of ply thicknesses
+w = 2*pi*freq;                          % Angular frequency to be inspected
+nTot = 3*sum(Nodes);
+nMax = 3*sum(Nodes);
+
+%% NORMALIZATION PARAMETERS
+Ca = 1e11;          % Pa = N/m^2
+rhoa = 1e3;         % kg/m^3
+% htot = sum(H);                
 ka = w*sqrt(rhoa/Ca);
-dr = 0.001;
-r = -1:dr:1;
-for ii=0:(N-1)
-    Pn = legendre(ii,r);
-    PLeg(ii+1,:) = Pn(1,:);
+dr = 0.001;         % spacing in the normalized ply z coordinates
+r = -1:dr:1;        % normalized z coordinates for legendre polynomials
+PLeg=nan(Nodes(1));
+for ii=0:(Nodes(1)-1)
+    Pn = legendre(ii,r);        % legendre associated functions evaluated at r
+    PLeg(ii+1,:) = Pn(1,:);     % take only mth-order
 end
 
-%%
-Un = zeros(NPlies,length(r),3,Nmax);
-
-for ii = 1:NPlies
-    matp = load_material_elastic(strcat('./',NomMat{ii},'.dat'));
-    mat  = RotationConstantesMateriaux_elastic(matp,phi(ii),theta(ii),psi(ii));
-    Cm = mat.C;
-    rho0m = mat.rho;
+%% LOAD THE MATERIAL PROPERTIES
+Un = zeros(nPlies,length(r),3,nMax);
+for ply = 1:nPlies
+ Matp = LoadElasticConstants(fullfile('./Materials',strcat(NomMat{ply},'.dat')));
+    C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
+    C = C./Ca;                  % normalization of stiffness tensor 
+    rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
     C(1,1,ii) = Cm(1,1)/Ca;
     C(1,2,ii) = Cm(1,2)/Ca;
     C(1,3,ii) = Cm(1,3)/Ca;
@@ -72,7 +69,7 @@ for ii = 1:NPlies
 end
 
 
-for ii = 1:NPlies
+for ii = 1:nPlies
     A11(1,1,ii) = C(1,1,ii);
     A11(1,2,ii) = C(1,6,ii);
     A11(1,3,ii) = C(1,5,ii);
@@ -150,111 +147,111 @@ for ii = 1:NPlies
 end
 
 % Debut du calcul
-ZUn = zeros(Ntot,Nmax);
+ZUn = zeros(nTot,nMax);
 
-F1 = zeros(Ntot,Ntot);
-G1 = zeros(Ntot,Ntot);
-H1 = zeros(Ntot,Ntot);
+F1 = zeros(nTot,nTot);
+G1 = zeros(nTot,nTot);
+H1 = zeros(nTot,nTot);
 
 Ntemp = 1;
 
 %% Développement sur une base de polynômes de Legendre d'ordre N(ii) pour la
 % couche ii = 1 à NPlies
-for ii = 1:NPlies
-    As = zeros(3*(N(ii)-2),3*N(ii));
-    Bs = zeros(3*(N(ii)-2),3*N(ii));
-    Cs = zeros(3*(N(ii)-2),3*N(ii));
+for ii = 1:nPlies
+    As = zeros(3*(Nodes(ii)-2),3*Nodes(ii));
+    Bs = zeros(3*(Nodes(ii)-2),3*Nodes(ii));
+    Cs = zeros(3*(Nodes(ii)-2),3*Nodes(ii));
     
     A2(:,:,ii) = -rho0(ii)*eye(3);
     
-    for mm=0:N(ii)-3
-        for nn=0:N(ii)-1
-            Bs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2/h(ii)*BB(:,:,ii)/ka*PmdPn(mm,nn); 
-            Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 4/(h(ii)^2)*CC(:,:,ii)/ka^2*Pmd2Pn(mm,nn);
+    for mm=0:Nodes(ii)-3
+        for nn=0:Nodes(ii)-1
+            Bs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2/H(ii)*BB(:,:,ii)/ka*PmdPn(mm,nn); 
+            Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 4/(H(ii)^2)*CC(:,:,ii)/ka^2*Pmd2Pn(mm,nn);
             if (mm == nn)
                 As(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2*A1(:,:,ii)/(2*nn+1);
                 Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1))+2*A2(:,:,ii)/(2*nn+1);
             end
         end
     end          
-    H1(Ntemp:Ntemp+3*(N(ii)-2)-1,3*sum(N(1:ii-1))+1:3*sum(N(1:ii))) = As;
-    F1(Ntemp:Ntemp+3*(N(ii)-2)-1,3*sum(N(1:ii-1))+1:3*sum(N(1:ii))) = Bs;
-    G1(Ntemp:Ntemp+3*(N(ii)-2)-1,3*sum(N(1:ii-1))+1:3*sum(N(1:ii))) = Cs;
+    H1(Ntemp:Ntemp+3*(Nodes(ii)-2)-1,3*sum(Nodes(1:ii-1))+1:3*sum(Nodes(1:ii))) = As;
+    F1(Ntemp:Ntemp+3*(Nodes(ii)-2)-1,3*sum(Nodes(1:ii-1))+1:3*sum(Nodes(1:ii))) = Bs;
+    G1(Ntemp:Ntemp+3*(Nodes(ii)-2)-1,3*sum(Nodes(1:ii-1))+1:3*sum(Nodes(1:ii))) = Cs;
     
-    Ntemp = Ntemp+3*(N(ii)-2);
+    Ntemp = Ntemp+3*(Nodes(ii)-2);
 end
 
 %% Conditions de continuité entre les couches ii et ii+1
-for ii = 1:NPlies-1
+for ii = 1:nPlies-1
             
     % Continuité des déplacements entre les couches ii et ii+1
-    Ds = zeros(3,3*N(ii+1));
-    Es = zeros(3,3*N(ii));
-    for nn=0:N(ii)-1
+    Ds = zeros(3,3*Nodes(ii+1));
+    Es = zeros(3,3*Nodes(ii));
+    for nn=0:Nodes(ii)-1
         Es(:,3*nn+1:3*(nn+1)) = eye(3);
     end
-    for nn=0:N(ii+1)-1
+    for nn=0:Nodes(ii+1)-1
         Ds(:,3*nn+1:3*(nn+1)) = -(-1)^nn*eye(3);
     end
         
-    G1(Ntemp:Ntemp+2,3*sum(N(1:ii-1))+1:3*sum(N(1:ii))) = Es;
-    G1(Ntemp:Ntemp+2,3*sum(N(1:ii))+1:3*sum(N(1:ii+1))) = Ds;
+    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ii-1))+1:3*sum(Nodes(1:ii))) = Es;
+    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ii))+1:3*sum(Nodes(1:ii+1))) = Ds;
     
     Ntemp = Ntemp+3; 
             
     % Continuité des contraintes normales entre les couches ii et
     % ii+1
-    Ds = zeros(3,3*N(ii));
-    Es = zeros(3,3*N(ii));
-    Dp = zeros(3,3*N(ii+1));
-    Ep = zeros(3,3*N(ii+1));
-    for nn=0:N(ii)-1
+    Ds = zeros(3,3*Nodes(ii));
+    Es = zeros(3,3*Nodes(ii));
+    Dp = zeros(3,3*Nodes(ii+1));
+    Ep = zeros(3,3*Nodes(ii+1));
+    for nn=0:Nodes(ii)-1
         Ds(:,3*nn+1:3*(nn+1)) = -ABC(:,:,ii);
-        Es(:,3*nn+1:3*(nn+1)) = 2/h(ii)*A33(:,:,ii)/ka*nn*(nn+1)/2;
+        Es(:,3*nn+1:3*(nn+1)) = 2/H(ii)*A33(:,:,ii)/ka*nn*(nn+1)/2;
     end
-    for nn=0:N(ii+1)-1
+    for nn=0:Nodes(ii+1)-1
         Dp(:,3*nn+1:3*(nn+1)) = ABC(:,:,ii+1)*(-1)^nn;
-        Ep(:,3*nn+1:3*(nn+1)) = -2/h(ii+1)*A33(:,:,ii+1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
+        Ep(:,3*nn+1:3*(nn+1)) = -2/H(ii+1)*A33(:,:,ii+1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
     end
-    F1(Ntemp:Ntemp+2,3*sum(N(1:ii-1))+1:3*sum(N(1:ii))) = Ds;
-    F1(Ntemp:Ntemp+2,3*sum(N(1:ii))+1:3*sum(N(1:ii+1))) = Dp;
-    G1(Ntemp:Ntemp+2,3*sum(N(1:ii-1))+1:3*sum(N(1:ii))) = Es;
-    G1(Ntemp:Ntemp+2,3*sum(N(1:ii))+1:3*sum(N(1:ii+1))) = Ep;
+    F1(Ntemp:Ntemp+2,3*sum(Nodes(1:ii-1))+1:3*sum(Nodes(1:ii))) = Ds;
+    F1(Ntemp:Ntemp+2,3*sum(Nodes(1:ii))+1:3*sum(Nodes(1:ii+1))) = Dp;
+    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ii-1))+1:3*sum(Nodes(1:ii))) = Es;
+    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:ii))+1:3*sum(Nodes(1:ii+1))) = Ep;
    
     Ntemp = Ntemp+3;
            
 end
 
 %% Conditions aux limites sur la surface basse
-Ds = zeros(3,3*N(1));
-Es = zeros(3,3*N(1));
-for nn=0:N(1)-1
+Ds = zeros(3,3*Nodes(1));
+Es = zeros(3,3*Nodes(1));
+for nn=0:Nodes(1)-1
    Ds(:,3*nn+1:3*(nn+1)) = ABC(:,:,1)*(-1)^nn;
-   Es(:,3*nn+1:3*(nn+1)) = -2/h(1)*A33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
+   Es(:,3*nn+1:3*(nn+1)) = -2/H(1)*A33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
 end
-F1(Ntemp:Ntemp+2,1:3*N(1)) = Ds;
-G1(Ntemp:Ntemp+2,1:3*N(1)) = Es;
+F1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Ds;
+G1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Es;
     
 Ntemp = Ntemp+3;
       
 %% Conditions aux limites sur la surface haute
-Dp = zeros(3,3*N(NPlies));
-Ep = zeros(3,3*N(NPlies));
-for nn=0:N(NPlies)-1
-    Dp(:,3*nn+1:3*(nn+1)) = -ABC(:,:,NPlies);
-    Ep(:,3*nn+1:3*(nn+1)) = 2/h(NPlies)*A33(:,:,NPlies)/ka*nn*(nn+1)/2;
+Dp = zeros(3,3*Nodes(nPlies));
+Ep = zeros(3,3*Nodes(nPlies));
+for nn=0:Nodes(nPlies)-1
+    Dp(:,3*nn+1:3*(nn+1)) = -ABC(:,:,nPlies);
+    Ep(:,3*nn+1:3*(nn+1)) = 2/H(nPlies)*A33(:,:,nPlies)/ka*nn*(nn+1)/2;
 end
-F1(Ntemp:Ntemp+2,3*sum(N(1:NPlies-1))+1:3*sum(N(1:NPlies))) = Dp;
-G1(Ntemp:Ntemp+2,3*sum(N(1:NPlies-1))+1:3*sum(N(1:NPlies))) = Ep;
+F1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Dp;
+G1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Ep;
     
 %% Calcul des valeurs propres (modes) de la structure
-M1 = [F1 -eye(Ntot);-H1 zeros(Ntot)];
-M2 = [G1 zeros(Ntot);zeros(Ntot) eye(Ntot)];
+M1 = [F1 -eye(nTot);-H1 zeros(nTot)];
+M2 = [G1 zeros(nTot);zeros(nTot) eye(nTot)];
 
 [Z1,K] = eig(M1,M2);
 
-kp = zeros(2*Ntot,1);
-for ii=1:2*Ntot
+kp = zeros(2*nTot,1);
+for ii=1:2*nTot
     if (K(ii,ii) == 0)
         kp(ii) = NaN;
     else
@@ -262,7 +259,7 @@ for ii=1:2*Ntot
     end
 end
 
-for ii=1:2*Ntot
+for ii=1:2*nTot
     if (real(kp(ii)) == 0)
         kp(ii) = NaN;
     else
@@ -274,17 +271,17 @@ end
 
 % interm = zeros(1,2*Ntot);
 [interm, Ind] = sort(kp);
-k = interm(1:Nmax);
-ZUn = Z1(1:Ntot,Ind(1:Nmax));
+k = interm(1:nMax);
+ZUn = Z1(1:nTot,Ind(1:nMax));
 
 
 % Reconstruction du vecteur U
-for kk=1:Nmax
+for kk=1:nMax
     for ll=1:3
-        for ii=1:NPlies
+        for ii=1:nPlies
             Un(ii,:,ll,kk) = zeros(1,length(r));
-            for jj=1:N(ii)
-                Un(ii,:,ll,kk) = Un(ii,:,ll,kk) + ZUn(ll+(jj-1)*3+sum(N(1:ii-1))*3,kk)*PLeg(jj,:);
+            for jj=1:Nodes(ii)
+                Un(ii,:,ll,kk) = Un(ii,:,ll,kk) + ZUn(ll+(jj-1)*3+sum(Nodes(1:ii-1))*3,kk)*PLeg(jj,:);
             end
         end
     end
@@ -304,18 +301,18 @@ for ii = 2:length(vit)
 end
 
 vitesse
-vitesse(NMode)
+vitesse(mMode)
 
 %% VISUALIZATION
 figure
 ht = 0;
-hdec = sum(h(1:NPlies));
-for ii=1:NPlies
-    ht = h(ii)+ht;
-    zm = ht - h(ii)/2;
-    z = h(ii)*r/2+zm;
-    plot((hdec-z)*1e3,abs(Dep(ii,:,1,NMode)))
+hdec = sum(H(1:nPlies));
+for ii=1:nPlies
+    ht = H(ii)+ht;
+    zm = ht - H(ii)/2;
+    z = H(ii)*r/2+zm;
+    plot((hdec-z)*1e3,abs(Dep(ii,:,1,mMode)))
     hold on
-    plot((hdec-z)*1e3,abs(Dep(ii,:,2,NMode)),'k')
-    plot((hdec-z)*1e3,abs(Dep(ii,:,3,NMode)),'r')
+    plot((hdec-z)*1e3,abs(Dep(ii,:,2,mMode)),'k')
+    plot((hdec-z)*1e3,abs(Dep(ii,:,3,mMode)),'r')
 end

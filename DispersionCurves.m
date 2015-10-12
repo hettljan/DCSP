@@ -21,18 +21,19 @@ clear all
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
 NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-h=0.23e-3;                                             % Thickness of the ply in [m]
 Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
 Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
 Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
+h=0.23e-3;                      % Thickness of the ply in [m]
 psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
 nFreqs = 100;                   % number of frequency steps
 df=6.1035e3;                    % frequency step size [Hz]
 nModes=12;
+legDeg=10;                      % degree of Legendre polynomial expansion
 
 %%
 nPlies = size(NomMat,2);        % Number of plies
-Nodes=ones(nPlies,1)*10;        % vector with the number of nodes per layer 
+Nodes=ones(nPlies,1)*legDeg;    % vector with the number of nodes/order of polynomial expansion  per layer 
 nNodes=3*sum(Nodes);            % total number of nodes in laminate x 3 components of displacement
 nMax=3*sum(Nodes);              % max number of modes????   
 H=ones(nPlies,1)*h;             % vector of ply thicknesses
@@ -50,7 +51,7 @@ freq=nan(nFreqs,1);       % Initialize the frequency vector
 rho0=nan(nPlies,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
-A21=nan(size(F11));
+F21=nan(size(F11));
 F22=nan(size(F11));
 F33=nan(3,3,nPlies);
 F31=nan(size(F11));
@@ -142,8 +143,8 @@ end
 
 %% CALCULATION LOOP
 tic;
-% parfor_progress(nFreqs); % Initialize the parfor progress bar
-for kk = 0:nFreqs-1
+parfor_progress(nFreqs); % Initialize the parfor progress bar
+parfor kk = 0:nFreqs-1
     w = dw+dw*kk;
     freq(kk+1) = w/(2*pi);
     ka = w*sqrt(rhoa/Ca);
@@ -173,7 +174,7 @@ for kk = 0:nFreqs-1
 
     % Conditions of continuity between plies - ply and ply+1
     for ply = 1:nPlies-1
-        % Continuité des déplacements entre les couches ii et ii+1
+        % Continuity of displacement on the interface - ply and ply+1
         Ds = zeros(3,3*Nodes(ply+1));
         Es = zeros(3,3*Nodes(ply));
         for nn=0:Nodes(ply)-1
@@ -188,7 +189,7 @@ for kk = 0:nFreqs-1
 
         Ntemp = Ntemp+3; 
 
-        % Continuité des contraintes normales entre les couches ii et
+        % Continuity of normal stress on the interface - ply and ply+1
         % ii+1
         Ds = zeros(3,3*Nodes(ply));
         Es = zeros(3,3*Nodes(ply));
@@ -232,10 +233,10 @@ for kk = 0:nFreqs-1
     F1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Dp;
     G1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Ep;
 
-    % Calculation of the proper values (modes)
+    % Calculation of the eigenvalue problem
     M1 = [F1 -eye(nNodes);-H1 zeros(nNodes)];
     M2 = [G1 zeros(nNodes);zeros(nNodes) eye(nNodes)];
-    [Z1,K] = eig(M1,M2);
+    [Z1,K] = eig(M1,M2);        % bottleneck
     kp = zeros(2*nNodes,1);
     for ply=1:2*nNodes
         if (K(ply,ply) == 0)
@@ -257,9 +258,9 @@ for kk = 0:nFreqs-1
     [interm, Ind] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
     Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
-%     parfor_progress;
+    parfor_progress;
 end
-% parfor_progress(0);
+parfor_progress(0);
 toc;
 
 %% ADJUST THE UNITS
