@@ -4,46 +4,45 @@
 clear all
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
-NomMat = {'Plexiglass'};
-Phi = [0];                  % First Euler angle
-Theta = [0];                % Second Euler angle
-Psi = [0];                  % Third Euler angle
-h = 8e-3;                   % thickness
-psip = 0;                   % propagation direction
+% NomMat = {'Plexiglass'};
+% Phi = [0];                  % First Euler angle
+% Theta = [0];                % Second Euler angle
+% Psi = [0];                  % Third Euler angle
+% h = 8e-3;                   % thickness
+% psip = 0;                   % propagation direction
 
-% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' ...
-%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};            
-% Phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-% Theta = [0 0 0 0 0 0 0 0 0 0 0 0];                       % second euler angle
-% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                         % third euler angle
-% h=0.23e-3;                              % Thickness of the ply in [m]
-% psip = 0;                               % propagation direction with respect to the main in-plane coordinate axis 
+NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' ...
+    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};            
+Phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+Theta = [0 0 0 0 0 0 0 0 0 0 0 0];                       % second euler angle
+Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                         % third euler angle
+h=0.23e-3;                              % Thickness of the ply in [m]
+psip = 0;                               % propagation direction with respect to the main in-plane coordinate axis 
                
 %% COMPUTATIONAL PARAMETERS
-freq = 50e3;                            % Frequency to be investigated
-mMode = 3;                              % Index of the mode to be inspected
+freq = 150e3;                           % Frequency to be investigated
+mMode = 1;                              % Index of the mode to be inspected
 legDeg=10;                              % Legendre polynomial degree      
 nPlies = size(NomMat,2);                % number of plies
 Nodes = ones(nPlies,1)*legDeg;          % vector of degrees of polynomial expansions in different plies
 H = ones(size(NomMat,2),1)*h;           % vector of ply thicknesses
 w = 2*pi*freq;                          % Angular frequency to be inspected
-nTot = 3*sum(Nodes);
-nMax = 3*sum(Nodes);
+nTot = 3*sum(Nodes);                    % total number of unknowns - 3(x,y,z component)xlegDeg(degree of Lge. polynomial)xNplies
 
 %% NORMALIZATION PARAMETERS
-Ca = 1e11;          % Pa = N/m^2
-rhoa = 1e3;         % kg/m^3         
-ka = w*sqrt(rhoa/Ca);
-dr = 0.01;         % spacing in the normalized ply z coordinates
-r = -1:dr:1;        % normalized z coordinates for legendre polynomials
-PLeg=nan(length(Nodes(1)),length(r));
-for ii=0:(Nodes(1)-1)
-    Pn = legendre(ii,r);        % legendre associated functions evaluated at r
-    PLeg(ii+1,:) = Pn(1,:);     % take only mth-order
+Ca = 1e11;                          % normalization coefficientPa = N/m^2
+rhoa = 1e3;                         % normalization coefficient kg/m^3         
+ka = w*sqrt(rhoa/Ca);   
+nPtsLayer=100;                      % number of points per layer
+R = linspace(-1,1,nPtsLayer);       % normalized z coordinates for legendre polynomials
+PLeg=nan(length(Nodes(1)),length(R));
+for polOrder=0:(Nodes(1)-1)           %
+    Pn = legendre(polOrder,R);        % legendre associated functions evaluated at r
+    PLeg(polOrder+1,:) = Pn(1,:);     % take only mth-order
 end
 
 %% PREALLOCATION OF THE VARIABLES FOR CALCULATION
-Un = zeros(nPlies,length(r),3,nMax);
+Un = zeros(nPlies,length(R),3,nTot);    % structure of the displacement vector - ply,nodes,u-component,mode
 rho0=nan(nPlies,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
@@ -243,16 +242,15 @@ for ii=1:2*nTot
 end
 
 %% POST-PROCESSING OF THE RESULTS
-% interm = zeros(1,2*Ntot);
 [interm, Ind] = sort(kp);
-k = interm(1:nMax);                 % complex wavenumber 
-ZUn = Z1(1:nTot,Ind(1:nMax));       % coefficients of the Legednre ploynamials 
+k = interm(1:nTot);                 % complex wavenumber 
+ZUn = Z1(1:nTot,Ind(1:nTot));       % coefficients of the Legednre ploynamials 
 
 %% RECONSTRUNCTION OF THE U VECTOR USING LEGENDRE POLYNOMIALS
-for kk=1:nMax
+for kk=1:nTot
     for ll=1:3
         for ply=1:nPlies
-            Un(ply,:,ll,kk) = zeros(1,length(r));
+            Un(ply,:,ll,kk) = zeros(1,length(R));
             for jj=1:Nodes(ply)
                 Un(ply,:,ll,kk) = Un(ply,:,ll,kk) + ZUn(ll+(jj-1)*3 + sum(Nodes(1:ply-1))*3,kk)*PLeg(jj,:);
             end
@@ -261,32 +259,50 @@ for kk=1:nMax
 end
 
 %% VELOCITY CALCULATIONS
-wavenumber = abs(real(k));          % wavenumber
-vit = 2*pi*freq./wavenumber;%*sqrt(max(rho0)*rhoa/(max(max(max(C)))*Ca))
+wavenumber = abs(real(k));              % wavenumber
+vit = 2*pi*freq./wavenumber;            % calculate the corresponding phase velocity
+
+Velocity(1) = vit(1);                   % add the first velocity
+Displacement(:,:,:,1) = Un(:,:,:,1);    % add the corresponding displacement
 l = 1;
-Velocity(l) = vit(l);
 for i = 2:length(vit)
-   if (vit(i) < 0.99999*vit(i-1) && isfinite(vit(i)))
+   if vit(i) < 0.99999*vit(i-1) && isfinite(vit(i)) % is the next velocity valid?
     l = l+1;
-    Velocity(l) = vit(i);
-    Displacement(:,:,:,l) = Un(:,:,:,i);
+    Velocity(l) = vit(i);                           % add it to the velocity vector 
+    Displacement(:,:,:,l) = Un(:,:,:,i);            % add the corresponding displacements  
    end
 end
-fprintf('\nPlotting mode with velocity\t v = %.2f m/s\n',Velocity(mMode));
+
+%% SEPARATION OF THE DISPLACEMENT COMPONENTS
+Ux=Displacement(:,:,1,:);           % x component of the displacement vector U
+SgnUx=sign(imag(Ux));               % figure out orientation for Ux
+Ux=abs(Ux).*SgnUx;                  % orientation corrected Ux
+Ux=reshape(Ux,[size(Ux,1) size(Ux,2) size(Ux,4)]);  % get rid of the 3 dim, it's size=1
+Uy=Displacement(:,:,2,:);           % y component of the displacement vector U
+SgnUy=sign(real(Uy));               % figure out orientation for Uy
+Uy=abs(Uy).*SgnUy;                  % orientation corrected Uy
+Uy=reshape(Uy,[size(Uy,1) size(Uy,2) size(Uy,4)]);  % get rid of the 3 dim, it's size=1
+Uz=Displacement(:,:,3,:);           % z component of the displacement vector U
+SgnUz=sign(real(Uz));               % figure out orientation for uz
+Uz=abs(Uz).*SgnUz;                  % orientation corrected Uy
+Uz=reshape(Uz,[size(Uz,1) size(Uz,2) size(Uz,4)]);  % get rid of the 3 dim, it's size=1
 
 %% VISUALIZATION
+mMode=3;
+fprintf('\nPlotting mode with velocity\t v = %.2f m/s\n',Velocity(mMode));
 figure
-ht = 0;
 hTot = sum(H(1:nPlies));
 for j=1:nPlies
-    ht = H(j)+ht;
-    zm = ht - H(j)/2;
-    z = H(j)*r/2+zm;
-    plot(abs(Displacement(j,:,1,mMode)),(hTot-z)*1e3,'b','LineWidth',2)
+    zm = sum(H(1:j))- H(j)/2;                   % define the center of the ply
+    z = H(j)*R/2+zm;                            % transform normalized r coordinate to z in ply
+    z=(hTot-z)./hTot;                           % normalize z coordinate with respect to total thickness
+    plot(Ux(j,:,mMode),z,'b','LineWidth',2);  % ux component of displacement
     hold on
-    plot(abs(Displacement(j,:,2,mMode)),(hTot-z)*1e3,'r--','LineWidth',2)
-    plot(abs(Displacement(j,:,3,mMode)),(hTot-z)*1e3,'g-.','LineWidth',2)
+    plot(Uy(j,:,mMode),z,'r--','LineWidth',2) % uy component of displacement
+    plot(Uz(j,:,mMode),z,'g-.','LineWidth',2) % uz component of displacement
 end
-xlabel('Displacement [-]');
-ylabel('Z-position [mm]');
+xlim([-1.1 1.1]);
+ylim([0 1]);
+xlabel('Normalized displacement [-]');
+ylabel('Through-thickness position [z/h]');
 legend('u_x','u_y','u_z')

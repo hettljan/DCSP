@@ -4,25 +4,25 @@
 clear all
 
 %%
-NomMat = {'Plexiglass'};
-h = 8e-3;                   % Thickness of the ply in [m]
-Phi = [0];                  % First Euler angle
-Theta = [0];                % Second Euler angle
-Psi = [0];                  % Third Euler angle
-psip=0;
+% NomMat = {'Plexiglass'};
+% h = 8e-3;                   % Thickness of the ply in [m]
+% Phi = [0];                  % First Euler angle
+% Theta = [0];                % Second Euler angle
+% Psi = [0];                  % Third Euler angle
+% psip=0;
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
-% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
-%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-% Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-% Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
-% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
-% h=0.23e-3;                      % Thickness of the ply in [m]
-% psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
+NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
+    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
+Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
+Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
+h=0.23e-3;                      % Thickness of the ply in [m]
+psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
 
 %%
-nFreqs = 50;                   % number of frequency steps
-df=6.1035e3;                    % frequency step size [Hz]
+nFreqs = 100;                   % number of frequency steps
+df=4e3;                         % frequency step size [Hz]
 nModes=12;                      % number of mode to be tracked
 legDeg=10;                      % degree of Legendre polynomial expansion
 nPlies = size(NomMat,2);        % Number of plies
