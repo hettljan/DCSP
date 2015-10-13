@@ -4,27 +4,27 @@
 clear all
 
 %%
-% NomMat = {'Plexiglass'};
-% h = 8e-3;                   % Thickness of the ply in [m]
-% Phi = [0];                  % First Euler angle
-% Theta = [0];                % Second Euler angle
-% Psi = [0];                  % Third Euler angle
-% psip=0;
+NomMat = {'TransIsComp'};
+h = 5e-3;                   % Thickness of the ply in [m]
+Phi = [0];                  % First Euler angle
+Theta = [0];                % Second Euler angle
+Psi = [0];                  % Third Euler angle
+psip=pi/6;
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
-NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
-    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
-Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
-h=0.23e-3;                      % Thickness of the ply in [m]
-psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
+% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
+%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
+% Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+% Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
+% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
+% h=0.23e-3;                      % Thickness of the ply in [m]
+% psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
 
 %%
-nFreqs = 100;                   % number of frequency steps
-df=4e3;                         % frequency step size [Hz]
-nModes=12;                      % number of mode to be tracked
-legDeg=10;                      % degree of Legendre polynomial expansion
+nFreqs = 1000;                  % number of frequency steps
+df=2e3;                         % frequency step size [Hz]
+legDeg=20;                      % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+nModes2Track=30;                % number of modes to be tracked
 nPlies = size(NomMat,2);        % Number of plies
 Nodes=ones(nPlies,1)*legDeg;    % vector with the number of nodes/order of polynomial expansion  per layer 
 nNodes=3*sum(Nodes);            % total number of nodes in laminate x 3 components of displacement
@@ -32,10 +32,10 @@ nMax=3*sum(Nodes);              % max number of modes????
 H=ones(nPlies,1)*h;             % vector of ply thicknesses
 
 %% NORMALIZATION PARAMETERS
-Ca = 1e11;              % Pa = N/m^2 normalization parameter
-rhoa = 1e3;             % kg/m^3 second normalization parameter 
-dw = 2*pi*df;           % Angular frequency step
-htot=sum(H);            % Total thickness of the plate
+Ca = 1e11;                      % Pa = N/m^2 normalization parameter
+rhoa = 1e3;                     % kg/m^3 second normalization parameter 
+dw = 2*pi*df;                   % Angular frequency step
+htot=sum(H);                    % Total thickness of the plate
 k = zeros(nMax,nFreqs);
 Un = zeros(nNodes,nMax,nFreqs);
 
@@ -229,8 +229,10 @@ parfor kk = 0:nFreqs-1
     % Calculation of the eigenvalue problem
     M1 = [F1 -eye(nNodes);-H1 zeros(nNodes)];
     M2 = [G1 zeros(nNodes);zeros(nNodes) eye(nNodes)];
-    [Z1,K] = eig(M1,M2);        % bottleneck
+    [Z1,K] = eig(M1,M2);        % bottleneck, calculates the mode shapes and "wavenumbers"
     kp = zeros(2*nNodes,1);
+    
+    % clean-up the unreasonable wavenumbers
     for ply=1:2*nNodes
         if (K(ply,ply) == 0)
             kp(ply) = NaN;
@@ -258,9 +260,9 @@ toc;
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);
-Wavenumber(Wavenumber>2000)=nan;    % Delete the insanely high wavenumbers
-Wavenumber=Wavenumber(1:2:end,:);
-Wavenumber=DispersionCurveSorting(freq,Wavenumber,nModes);
+% Wavenumber(Wavenumber>2000)=nan;      % Delete the insanely high wavenumbers
+Wavenumber=Wavenumber(1:2:end,:);       % two subsequent modes are duplicates, so take just one of them
+Wavenumber=DispersionCurveSorting(freq,Wavenumber,nModes2Track);
 
 %% CALCULATE THE VELOCITY
 Velocity=nan(size(Wavenumber));
@@ -269,18 +271,28 @@ for i=1:size(Wavenumber,1)
 end 
 
 %% VISUALIZATION
+fUnits='f';
+switch fUnits
+    case 'f'
+        freq=freq*1e-3; % frequency in kHz
+        xLab='Frequency [kHz]';
+    case 'fd'
+        freq=freq*h*1e-3;   % frequency-thickness product in MHz*mm
+        xLab='Frequency-thickness [MHz \cdot mm]';
+end
+
 figure
-subplot(1,2,1)
-plot(freq*1e-3,Wavenumber,'*')
-xlim([freq(1),freq(end)]*1e-3)
+subplot(2,1,1)
+plot(freq,Wavenumber,'*')
+xlim([freq(1),freq(end)])
 ylim([0,700]);
-xlabel(strcat('Frequency [kHz]'),'FontSize',14)
+xlabel(xLab,'FontSize',14)
 ylabel(strcat('Wavenumber [m^{-1}]'),'FontSize',14)
 
-subplot(1,2,2)
+subplot(2,1,2)
 hold on
-plot(freq*1e-3,Velocity,'*')
-xlim([freq(1) freq(end)]*1e-3)
+plot(freq,Velocity,'*')
+xlim([freq(1) freq(end)])
 ylim([0 1e4]);
-xlabel(strcat('Frequency [kHz]'),'FontSize',14)
+xlabel(xLab,'FontSize',14)
 ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)

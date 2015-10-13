@@ -1,0 +1,148 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{epsfig}
+
+
+\begin{document}
+
+\title{Rotation of Stiffness Matrix for Anisotropic Materials}
+
+\section{Coordinate system and principal axis}
+
+\begin{figure}
+	\epsfig{file=EulerAngles.eps, scale=0.55}
+	\caption{Description of Euler angles}
+	\label{fig:EulerAngles}     
+\end{figure}
+
+\subsection{Rotation matrix}
+
+\begin{equation}
+\label{eq:RotMat}
+R = 
+\begin{bmatrix}
+  \cos{\phi}\cos{\psi}-\sin{\phi}\cos{\theta}\sin{\psi} & \sin{\phi}\cos{\psi}+\cos{\phi}\cos{\theta}\sin{\psi} & 
+  \sin{\theta}\sin{\psi}\\ 
+  -\cos{\phi}\sin{\psi} - \sin{\phi}\cos{\theta}\cos{\psi}& 
+  -\sin{\phi}\sin{\psi} + \cos{\phi}\cos{\theta}\cos{\psi}& 
+  \sin{\theta}\cos{\psi}  \\
+  \sin{\phi}\sin{\theta} & 
+  -\cos{\phi}\sin{\theta} &
+  \cos{\theta} \\ 
+\end{bmatrix} 
+\end{equation}
+
+\begin{equation}
+\label{eq:BondMat}
+M = 
+\begin{bmatrix}
+R_{11}^2 & R_{12}^2 & R_{13}^2 & 2 R_{12} R_{13} & 2 R_{13} R_{11} & 2 R_{11} R_{12} \\ 
+R_{21}^2 & R_{22}^2 & R_{23}^2 & 2 R_{22} R_{23} & 2 R_{23} R_{21} & 2 R_{21} R_{22} \\
+R_{31}^2 & R_{32}^2 & R_{33}^2 & 2 R_{32} R_{33} & 2 R_{33} R_{31} & 2 R_{31} R_{32} \\
+R_{21} R_{31} & R_{22} R_{32} & R_{23} R_{33} & R_{22} R_{33} + R_{23} R_{32} & R_{21} R_{33} + R_{23} R_{31} & R_{22}R_{31} + R_{21} R_{32} \\
+R_{31} R_{11} & R_{32} R_{12} & R_{33} R_{13} & R_{12} R_{33} + R_{13} R_{32} & R_{13} R_{31} + R_{11} R_{33} & R_{11}R_{32} + R_{12} R_{31} \\  
+R_{11} R_{21} & R_{12} R_{22} & R_{13} R_{23} & R_{12} R_{23} + R_{13} R_{22} & R_{13} R_{21} + R_{11} R_{23} & R_{11}R_{22} + R_{12} R_{21} \\    
+\end{bmatrix} 
+\end{equation}
+
+
+\section{Olivier's implementation}
+We will omit all the piezoelectric and magnetic properties and reverse engineer the formulas. Few helpful things first:
+
+\begin{equation}
+\label{eq:GammaMatrix}
+\Gamma_{ij}= 
+\begin{bmatrix}
+C_{i11l} & C_{i12l} & C_{i13l} \\
+C_{i21l} & C_{i22l} & C_{i23l} \\
+C_{i31l} & C_{i32l} & C_{i33l} \\
+\end{bmatrix} 
+\end{equation}
+This can be converted using the Voigt's notation to:
+\begin{equation}
+\label{eq:GammaMatrixVoigt}
+\Gamma_{11}=
+\begin{bmatrix}
+C_{1111} & C_{1121} & C_{1131} \\
+C_{1211} & C_{1221} & C_{1231} \\
+C_{1311} & C_{1321} & C_{1331} \\
+\end{bmatrix}=  
+\begin{bmatrix}
+C_{11} & C_{16} & C_{15} \\
+C_{61} & C_{66} & C_{65} \\
+C_{51} & C_{56} & C_{55} \\
+\end{bmatrix} 
+\end{equation} 
+Now we can start constructing the Stroh matrix step by step
+\begin{equation}
+\label{eq:A1}
+A_1 = A_1'+A_2''A_{BC},  
+\end{equation}
+where
+\begin{align}
+\label{eq:A1prime}
+	A_1' = &(\Gamma_{11}-\Gamma_{13}\Gamma_{33}^{-1}\Gamma_{31})\cos^2{\psi'} \nonumber\\ &+(\Gamma_{12}+\Gamma_{21}-\Gamma_{13}\Gamma_{33}^{-1}\Gamma_{32}-\Gamma_{23}\Gamma_{33}^{-1}\Gamma_{31})\sin{\psi'}\cos{\psi'} \nonumber\\
+	&+(\Gamma_{22}-\Gamma_{23}\Gamma_{33}^{-1}\Gamma_{32})\sin^2{\psi'}
+\end{align}
+and 
+\begin{equation}
+\label{eq:A2prime}
+A_2' =\Gamma_{33}^{-1}(\Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'})  
+\end{equation}
+and the last part
+\begin{equation}
+\label{eq:A2dblprime}
+A_2'' = (\Gamma_{13} \cos{\psi'} + \Gamma_{23} \sin{\psi'})\Gamma_{33}^{-1}  
+\end{equation}
+Now we have to start tuning the pieces in the formula. Let's start from the last one.
+\begin{equation}
+\label{eq:ABC}
+A_{BC} = \Gamma_{33}A_2' = \Gamma_{33}\Gamma_{33}^{-1}(\Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'}) = \Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'}
+\end{equation}
+Now we can $A_{BC}$ and $A_2''$ to pre-calculate the second part of (\ref{eq:A1}) as follows:
+\begin{align*}
+	A_2'' A_{BC} = & (\Gamma_{13} \cos{\psi'} + \Gamma_{23} \sin{\psi'})\Gamma_{33}^{-1} (\Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'}) \nonumber\\
+				 = & \Gamma_{13}\Gamma_{33}^{-1}\Gamma_{31} \cos^2{\psi'} + \Gamma_{13}\Gamma_{33}^{-1}\Gamma_{32} \cos{\psi'}\sin{\psi'} \nonumber \\
+				 + & \Gamma_{23}\Gamma_{33}^{-1}\Gamma_{31}\cos{\psi'}\sin{\psi'}+ \Gamma_{23}\Gamma_{33}^{-1}\Gamma_{32} \sin^2{\psi'}
+\end{align*}
+Now, we can finally evaluate equation (\ref{eq:A1}) by plugging the previous result as the second term
+\begin{align*}
+	A_1= A_1'+A_2''A_{BC} = &(\Gamma_{11}-\Gamma_{13}\Gamma_{33}^{-1}\Gamma_{31})\cos^2{\psi'} \nonumber\\
+				 + &(\Gamma_{12}+\Gamma_{21}-\Gamma_{13}\Gamma_{33}^{-1}\Gamma_{32} - \Gamma_{23}\Gamma_{33}^{-1}\Gamma_{31})\sin{\psi'}\cos{\psi'} \nonumber\\
+				 + & (\Gamma_{22}-\Gamma_{23}\Gamma_{33}^{-1}\Gamma_{32})\sin^2{\psi'}\\
+				 + &  \Gamma_{13}\Gamma_{33}^{-1}\Gamma_{31} \cos^2{\psi'} + \Gamma_{13}\Gamma_{33}^{-1}\Gamma_{32} \cos{\psi'}\sin{\psi'} \nonumber \\
+				 + & \Gamma_{23}\Gamma_{33}^{-1}\Gamma_{31}\cos{\psi'}\sin{\psi'}+ \Gamma_{23}\Gamma_{33}^{-1}\Gamma_{32} \sin^2{\psi'} \nonumber \\
+				 = & \Gamma_{11}\cos^2{\psi'} + (\Gamma_{12}+\Gamma_{21})\cos{\psi'}\sin{\psi'} + \Gamma_{22}\sin^2{\psi'}
+\end{align*}
+Another elements we have to calculate are $B$, $A_2$ and $C$. Let's start with $B$ which is defined as:
+\begin{align}
+	B = &\Gamma_{33}A_2' + A_2''\Gamma_{33} = \Gamma_{33} \Gamma_{33}^{-1}(\Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'}) \nonumber \\
+		&+ (\Gamma_{13} \cos{\psi'} + \Gamma_{23} \sin{\psi'})\Gamma_{33}^{-1}\Gamma_{33} \nonumber \\
+		& = (\Gamma_{31} + \Gamma_{13}) \cos{\psi'} + (\Gamma_{32} + \Gamma_{23})\sin{\psi'}
+\end{align}
+Now we can proceed to $A_2$
+\begin{equation}
+	A_2 = -\rho_0 \omega^2 I_p,
+\end{equation}
+where $\rho_0$ is layer density and $I_p$ identity matrix. At last, $C$ is defined simply as
+\begin{equation}
+	C = -\Gamma_{33}
+\end{equation}
+Recapitulation of the most important results. These will be the variables we'll be using further on:
+\begin{eqnarray}
+	A_1 &=& \Gamma_{11}\cos^2{\psi'} + (\Gamma_{12}+\Gamma_{21})\cos{\psi'}\sin{\psi'} + \Gamma_{22}\sin^2{\psi'} \nonumber \\
+	B 	&=& (\Gamma_{31} + \Gamma_{13}) \cos{\psi'} + (\Gamma_{32} + \Gamma_{23})\sin{\psi'} \nonumber \\
+	A_2 &=& -\rho_0 \omega^2 I_p \nonumber \\
+	C	&=& -\Gamma_{33} \nonumber \\
+	A_{BC} &=&  \Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'} \nonumber
+\end{eqnarray}
+In the implementation the $A_2$ is not multiplied by the $\omega^2$ in the preparatory stage.
+
+
+
+\end{document}
+

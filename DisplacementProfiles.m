@@ -4,20 +4,20 @@
 clear all
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
-% NomMat = {'Plexiglass'};
-% Phi = [0];                  % First Euler angle
-% Theta = [0];                % Second Euler angle
-% Psi = [0];                  % Third Euler angle
-% h = 8e-3;                   % thickness
-% psip = 0;                   % propagation direction
+NomMat = {'TransIsComp'};
+h = 5e-3;                   % Thickness of the ply in [m]
+Phi = [0];                  % First Euler angle
+Theta = [0];                % Second Euler angle
+Psi = [0];                  % Third Euler angle
+psip=0;
 
-NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' ...
-    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};            
-Phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-Theta = [0 0 0 0 0 0 0 0 0 0 0 0];                       % second euler angle
-Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                         % third euler angle
-h=0.23e-3;                              % Thickness of the ply in [m]
-psip = 0;                               % propagation direction with respect to the main in-plane coordinate axis 
+% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' ...
+%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};            
+% Phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+% Theta = [0 0 0 0 0 0 0 0 0 0 0 0];                       % second euler angle
+% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                         % third euler angle
+% h=0.23e-3;                              % Thickness of the ply in [m]
+% psip = 0;                               % propagation direction with respect to the main in-plane coordinate axis 
                
 %% COMPUTATIONAL PARAMETERS
 freq = 150e3;                           % Frequency to be investigated
