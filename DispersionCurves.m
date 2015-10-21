@@ -4,26 +4,26 @@
 clear all
 
 %%
-NomMat = {'TransIsComp'};
-h = 5e-3;                   % Thickness of the ply in [m]
-Phi = [0];                  % First Euler angle
-Theta = [0];                % Second Euler angle
-Psi = [0];                  % Third Euler angle
-psip=pi/6;
+% NomMat = {'TransIsComp'};
+% h = 5e-3;                   % Thickness of the ply in [m]
+% Phi = [0];                  % First Euler angle
+% Theta = [0];                % Second Euler angle
+% Psi = [0];                  % Third Euler angle
+% psip=0;
 
 %% LAYUP, PLY PROPERTIES AND ORIENTATION
-% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
-%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-% Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-% Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
-% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
-% h=0.23e-3;                      % Thickness of the ply in [m]
-% psip = 0;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
+NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
+    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
+Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
+Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
+Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
+h=0.23e-3;                      % Thickness of the ply in [m]
+psip = pi/6;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
 
 %%
-nFreqs = 1000;                  % number of frequency steps
+nFreqs = 500;                  % number of frequency steps
 df=2e3;                         % frequency step size [Hz]
-legDeg=20;                      % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+legDeg=10;                      % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
 nModes2Track=30;                % number of modes to be tracked
 nPlies = size(NomMat,2);        % Number of plies
 Nodes=ones(nPlies,1)*legDeg;    % vector with the number of nodes/order of polynomial expansion  per layer 
@@ -136,8 +136,7 @@ end
 
 %% CALCULATION LOOP
 tic;
-parfor_progress(nFreqs); % Initialize the parfor progress bar
-parfor kk = 0:nFreqs-1
+parfor kk=0:nFreqs-1
     w = dw+dw*kk;
     freq(kk+1) = w/(2*pi);
     ka = w*sqrt(rhoa/Ca);
@@ -253,14 +252,12 @@ parfor kk = 0:nFreqs-1
     [interm, Ind] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
     Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
-    parfor_progress;
 end
-parfor_progress(0);
 toc;
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);
-% Wavenumber(Wavenumber>2000)=nan;      % Delete the insanely high wavenumbers
+Wavenumber(Wavenumber>2000)=nan;      % Delete the insanely high wavenumbers
 Wavenumber=Wavenumber(1:2:end,:);       % two subsequent modes are duplicates, so take just one of them
 Wavenumber=DispersionCurveSorting(freq,Wavenumber,nModes2Track);
 

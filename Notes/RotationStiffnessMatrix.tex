@@ -5,6 +5,8 @@
 \usepackage{amsmath}
 \usepackage{mathrsfs}
 \usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{hyperref}
 
 
 \begin{document}
@@ -14,11 +16,9 @@
 \section{Coordinate system and principal axis}
 
 \begin{figure}
-	\epsfig{file=EulerAngles.eps, scale=0.55}
-	\caption{Description of Euler angles}
-	\label{fig:EulerAngles}     
+	\epsfig{file=EulerAngles_600.eps, scale=0.75}
+	\caption{Rotation and Euler's angles. Source: \href{http://mathworld.wolfram.com/EulerAngles.html}{WolframMathWorld}}
 \end{figure}
-
 \subsection{Rotation matrix}
 
 \begin{equation}
@@ -141,8 +141,6 @@ Recapitulation of the most important results. These will be the variables we'll 
 	A_{BC} &=&  \Gamma_{31} \cos{\psi'} + \Gamma_{32} \sin{\psi'} \nonumber
 \end{eqnarray}
 In the implementation the $A_2$ is not multiplied by the $\omega^2$ in the preparatory stage.
-
-
 
 \end{document}
 
