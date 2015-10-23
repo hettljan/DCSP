@@ -1,41 +1,33 @@
+function DispersionCurves(NomMat,EulerAngles,H,psip,df,nFreqs,legDeg,nModes2Track)
 % Calculates the dispersion curves for layered anisotropic materials using
 % the Legendre and Laguerre polynomial approach
 % Originally supplied by O. Bou-Matar, Lille
-clear all
+%
+% INPUT: 
+% NomMat        - Cell array with names of materials (link to text files .dat)
+% EulerAngles   - 1st, 2nd, 3rd Euler angle in [3xnPlies] matrix, phi is in first
+%                 row, theta in 2nd row, psi in 3rd row, all in [rad]
+% H             - Vector with ply/layer thicknesses [m]
+% psip          - Angle of wave propagation with respect to the main
+%                 in-plane coordinate axis [rad]
+% df            - Frequency step in [Hz]
+% nFreqs        - Number of frequency steps
+% legDeg        - Degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+% nModes2Track  - Number of modes to be tracked
 
-%%
-% NomMat = {'TransIsComp'};
-% h = 5e-3;                   % Thickness of the ply in [m]
-% Phi = [0];                  % First Euler angle
-% Theta = [0];                % Second Euler angle
-% Psi = [0];                  % Third Euler angle
-% psip=0;
-
-%% LAYUP, PLY PROPERTIES AND ORIENTATION
-NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'...
-    'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};
-Phi=[0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-Theta=[0 0 0 0 0 0 0 0 0 0 0 0];                       % Second Euler angle
-Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                       % Third Euler angle                
-h=0.23e-3;                      % Thickness of the ply in [m]
-psip = pi/6;                       % angle of wave propagation with respect to the main in-plane coordinate axis 
-
-%%
-nFreqs = 500;                  % number of frequency steps
-df=2e3;                         % frequency step size [Hz]
-legDeg=10;                      % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
-nModes2Track=30;                % number of modes to be tracked
+%% PREPARE THE OTHER PARAMETERS
+Phi=EulerAngles(1,:);
+Theta=EulerAngles(2,:);
+Psi=EulerAngles(3,:);
 nPlies = size(NomMat,2);        % Number of plies
 Nodes=ones(nPlies,1)*legDeg;    % vector with the number of nodes/order of polynomial expansion  per layer 
 nNodes=3*sum(Nodes);            % total number of nodes in laminate x 3 components of displacement
 nMax=3*sum(Nodes);              % max number of modes????   
-H=ones(nPlies,1)*h;             % vector of ply thicknesses
 
 %% NORMALIZATION PARAMETERS
 Ca = 1e11;                      % Pa = N/m^2 normalization parameter
 rhoa = 1e3;                     % kg/m^3 second normalization parameter 
 dw = 2*pi*df;                   % Angular frequency step
-htot=sum(H);                    % Total thickness of the plate
 k = zeros(nMax,nFreqs);
 Un = zeros(nNodes,nMax,nFreqs);
 
@@ -44,13 +36,10 @@ freq=nan(nFreqs,1);     % Initialize the frequency vector
 rho0=nan(nPlies,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
-F21=nan(size(F11));
 F22=nan(size(F11));
 F33=nan(3,3,nPlies);
 F31=nan(size(F11));
-F13=nan(size(F11));
 F32=nan(size(F11));
-F23=nan(size(F11));
 A1=nan(3,3,nPlies);
 BB=nan(3,3,nPlies);
 CC=nan(3,3,nPlies);
@@ -136,6 +125,7 @@ end
 
 %% CALCULATION LOOP
 tic;
+parfor_progress(nFreqs);
 parfor kk=0:nFreqs-1
     w = dw+dw*kk;
     freq(kk+1) = w/(2*pi);
@@ -208,7 +198,7 @@ parfor kk=0:nFreqs-1
     Es = zeros(3,3*Nodes(1));
     for nn=0:Nodes(1)-1
         Ds(:,3*nn+1:3*(nn+1)) = ABC(:,:,1)*(-1)^nn;
-        Es(:,3*nn+1:3*(nn+1)) = -2/h(1)*F33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
+        Es(:,3*nn+1:3*(nn+1)) = -2/H(1)*F33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
     end
     F1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Ds;
     G1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Es;        
@@ -252,19 +242,21 @@ parfor kk=0:nFreqs-1
     [interm, Ind] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
     Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
+    parfor_progress;
 end
+parfor_progress(0);
 toc;
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);
 Wavenumber(Wavenumber>2000)=nan;      % Delete the insanely high wavenumbers
-Wavenumber=Wavenumber(1:2:end,:);       % two subsequent modes are duplicates, so take just one of them
+Wavenumber=Wavenumber(1:2:end,:);     % two subsequent modes are duplicates, so take just one of them
 Wavenumber=DispersionCurveSorting(freq,Wavenumber,nModes2Track);
 
 %% CALCULATE THE VELOCITY
 Velocity=nan(size(Wavenumber));
-for i=1:size(Wavenumber,1)
-    Velocity(i,:)=freq'./squeeze(Wavenumber(i,:));
+for mode=1:size(Wavenumber,1)
+    Velocity(mode,:)=freq'./squeeze(Wavenumber(mode,:));
 end 
 
 %% VISUALIZATION
@@ -274,7 +266,7 @@ switch fUnits
         freq=freq*1e-3; % frequency in kHz
         xLab='Frequency [kHz]';
     case 'fd'
-        freq=freq*h*1e-3;   % frequency-thickness product in MHz*mm
+        freq=freq*sum(H)*1e-3;   % frequency-thickness product in MHz*mm
         xLab='Frequency-thickness [MHz \cdot mm]';
 end
 
