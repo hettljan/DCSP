@@ -1,39 +1,32 @@
+function DisplacementProfiles(NomMat,EulerAngles,H,psip,freq,nMode,legDeg)
 % Calculates the displacements for layered anisotropic materials using
 % the Legendre and Laguerre polynomial approach
 % Originally supplied by O. Bou-Matar, Lille
-clear all
-
-%% LAYUP, PLY PROPERTIES AND ORIENTATION
-NomMat = {'TransIsComp'};
-h = 5e-3;                   % Thickness of the ply in [m]
-Phi = [0];                  % First Euler angle
-Theta = [0];                % Second Euler angle
-Psi = [0];                  % Third Euler angle
-psip=0;
-
-% NomMat = {'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa' ...
-%     'Alamsa' 'Alamsa' 'Alamsa' 'Alamsa'};            
-% Phi = [0 -pi/4 0 -pi/4 0 -pi/4 -pi/4 0 -pi/4 0 -pi/4 0]; % First Euler angle
-% Theta = [0 0 0 0 0 0 0 0 0 0 0 0];                       % second euler angle
-% Psi = [0 0 0 0 0 0 0 0 0 0 0 0];                         % third euler angle
-% h=0.23e-3;                              % Thickness of the ply in [m]
-% psip = 0;                               % propagation direction with respect to the main in-plane coordinate axis 
-               
+% INPUT: 
+% NomMat        - Cell array with names of materials (link to text files .dat)
+% EulerAngles   - 1st, 2nd, 3rd Euler angle in [3xnPlies] matrix, phi is in first
+%                 row, theta in 2nd row, psi in 3rd row, all in [rad]
+% H             - Vector with ply/layer thicknesses [m]
+% psip          - Angle of wave propagation with respect to the main
+%                 in-plane coordinate axis [rad]
+% freq          - Frequency for which the displacement profile should be calculated in [Hz]
+% nMode         - Mode index - the fastest mode has index 1 and with ascending mode numbers correspond to modes with decreasing velocity
+% legDeg        - Degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+             
 %% COMPUTATIONAL PARAMETERS
-freq = 150e3;                           % Frequency to be investigated
-mMode = 1;                              % Index of the mode to be inspected
-legDeg=10;                              % Legendre polynomial degree      
+Phi=EulerAngles(1,:);
+Theta=EulerAngles(2,:);
+Psi=EulerAngles(3,:);
 nPlies = size(NomMat,2);                % number of plies
 Nodes = ones(nPlies,1)*legDeg;          % vector of degrees of polynomial expansions in different plies
-H = ones(size(NomMat,2),1)*h;           % vector of ply thicknesses
 w = 2*pi*freq;                          % Angular frequency to be inspected
 nTot = 3*sum(Nodes);                    % total number of unknowns - 3(x,y,z component)xlegDeg(degree of Lge. polynomial)xNplies
+nPtsLayer=20;                      		% number of points per layer
 
 %% NORMALIZATION PARAMETERS
 Ca = 1e11;                          % normalization coefficientPa = N/m^2
 rhoa = 1e3;                         % normalization coefficient kg/m^3         
 ka = w*sqrt(rhoa/Ca);   
-nPtsLayer=100;                      % number of points per layer
 R = linspace(-1,1,nPtsLayer);       % normalized z coordinates for legendre polynomials
 PLeg=nan(length(Nodes(1)),length(R));
 for polOrder=0:(Nodes(1)-1)           %
@@ -288,18 +281,17 @@ Uz=abs(Uz).*SgnUz;                  % orientation corrected Uy
 Uz=reshape(Uz,[size(Uz,1) size(Uz,2) size(Uz,4)]);  % get rid of the 3 dim, it's size=1
 
 %% VISUALIZATION
-mMode=3;
-fprintf('\nPlotting mode with velocity\t v = %.2f m/s\n',Velocity(mMode));
+fprintf('\nPlotting mode with velocity\t v = %.2f m/s\n',Velocity(nMode));
 figure
 hTot = sum(H(1:nPlies));
 for j=1:nPlies
     zm = sum(H(1:j))- H(j)/2;                   % define the center of the ply
     z = H(j)*R/2+zm;                            % transform normalized r coordinate to z in ply
     z=(hTot-z)./hTot;                           % normalize z coordinate with respect to total thickness
-    plot(Ux(j,:,mMode),z,'b','LineWidth',2);  % ux component of displacement
+    plot(Ux(j,:,nMode),z,'b','LineWidth',2);    % ux component of displacement
     hold on
-    plot(Uy(j,:,mMode),z,'r--','LineWidth',2) % uy component of displacement
-    plot(Uz(j,:,mMode),z,'g-.','LineWidth',2) % uz component of displacement
+    plot(Uy(j,:,nMode),z,'r--','LineWidth',2)   % uy component of displacement
+    plot(Uz(j,:,nMode),z,'g-.','LineWidth',2) 	% uz component of displacement
 end
 xlim([-1.1 1.1]);
 ylim([0 1]);

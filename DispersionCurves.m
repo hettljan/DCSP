@@ -285,3 +285,6 @@ xlim([freq(1) freq(end)])
 ylim([0 1e4]);
 xlabel(xLab,'FontSize',14)
 ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)
+
+%% SAVING
+save 'DispData' 'freq' 'Wavenumber' 'Velocity' 
