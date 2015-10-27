@@ -1,4 +1,4 @@
-function DispersionCurves(NomMat,EulerAngles,H,psip,df,nFreqs,legDeg,nModes2Track)
+function DispersionCurves(NomMat,EulerAngles,H,psip,df,nFreqs,legDeg,nModes2Track,varargin)
 % Calculates the dispersion curves for layered anisotropic materials using
 % the Legendre and Laguerre polynomial approach
 % Originally supplied by O. Bou-Matar, Lille
@@ -14,8 +14,21 @@ function DispersionCurves(NomMat,EulerAngles,H,psip,df,nFreqs,legDeg,nModes2Trac
 % nFreqs        - Number of frequency steps
 % legDeg        - Degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
 % nModes2Track  - Number of modes to be tracked
+% OPTIONAL:
+%   saveOn      - Enable saving of the dispersion data
+
+%% INPUT PARSING
+numvarargs = length(varargin);
+if numvarargs > 1
+    error('myfuns:somefun2Alt:TooManyInputs', ...
+        'requires at most 1 optional inputs');
+end
+optargs = {0};
+optargs(1:numvarargs) = varargin;
+[saveOn] = optargs{:};
 
 %% PREPARE THE OTHER PARAMETERS
+folder='G:\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
 Phi=EulerAngles(1,:);
 Theta=EulerAngles(2,:);
 Psi=EulerAngles(3,:);
@@ -48,7 +61,7 @@ A2=nan(3,3,nPlies);
 
 %% LOAD AND STACK THE MATERIAL PROPERTIES FOR PLIES AND STROH MATRIX
 for ply = 1:nPlies
-    Matp = LoadElasticConstants(fullfile('./Materials',strcat(NomMat{ply},'.dat')));
+    Matp = LoadElasticConstants(fullfile(folder,strcat(NomMat{ply},'.dat')));
     C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
     C = C./Ca;                  % normalization of stiffness tensor 
     rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
@@ -287,4 +300,6 @@ xlabel(xLab,'FontSize',14)
 ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)
 
 %% SAVING
-save 'DispData' 'freq' 'Wavenumber' 'Velocity' 
+if saveOn == 1
+    save 'DispData' 'freq' 'Wavenumber' 'Velocity' 
+end

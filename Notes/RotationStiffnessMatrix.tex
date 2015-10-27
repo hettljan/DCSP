@@ -142,5 +142,25 @@ Recapitulation of the most important results. These will be the variables we'll 
 \end{eqnarray}
 In the implementation the $A_2$ is not multiplied by the $\omega^2$ in the preparatory stage.
 
+\section{Stifness matrix}
+The standard Voigt notation is used, so the shear components are $\gamma_{ij}=2\epsilon_{ij}$.
+
+\begin{equation}
+	\begin{bmatrix} \sigma_1 \\ \sigma_2 \\ \sigma_3 \\ \sigma_4 \\ \sigma_5 \\ \sigma_6 \end{bmatrix} = 
+	\begin{bmatrix}
+		C_{11} & C_{12} & C_{13} & 0 & 0 & 0 \\
+		C_{12} & C_{22} & C_{23} & 0 & 0 & 0 \\
+		C_{13} & C_{23} & C_{33} & 0 & 0 & 0 \\
+		0 & 0 & 0 & C_{44} & 0 & 0 \\
+		0 & 0 & 0 & 0 & C_{55} & 0 \\
+		0 & 0 & 0 & 0 & 0 & C_{66} \end{bmatrix}
+	\begin{bmatrix} \epsilon_1 \\ \epsilon_2 \\ \epsilon_3 \\ \epsilon_4 \\ \epsilon_5 \\ \epsilon_6 \end{bmatrix}
+\end{equation}
+
+\begin{equation}
+\begin{bmatrix} \epsilon_1 \\ \epsilon_2 \\ \epsilon_3 \\ \epsilon_4 \\ \epsilon_5 \\ \epsilon_6 \end{bmatrix} =
+\begin{bmatrix} \epsilon_{11} \\ \epsilon_{22} \\ \epsilon_{33} \\ 2\epsilon_{23} \\ 2\epsilon_{13} \\ 2\epsilon_{12} \end{bmatrix} 
+\end{equation}
+
 \end{document}
 

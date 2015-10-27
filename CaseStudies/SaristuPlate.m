@@ -1,11 +1,12 @@
 % This script calculates the dispersion curves for a thin CFRP plate for
 % SARISTU project. There are 11 layers with different elastic properties
-
+clear all
 psip = 0;           % angle of wave propagation with respect to the main in-plane coordinate axis 
-nFreqs = 400;       % number of frequency steps
-df=2.5e3;           % frequency step size [Hz]
+nFreqs = 100;       % number of frequency steps
+df=5e3;             % frequency step size [Hz]
 legDeg=10;          % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
 nModes2Track=10;    % number of modes to be tracked
+saveOn=1;
 NomMat = {'5Harness' 'NCFBiaxial' 'Uniweave' 'NCFBiaxial' 'NCFBiaxial' 'NCFBiaxial'...
     'NCFBiaxial' 'Uniweave' 'NCFBiaxial' '5Harness' 'Glass'};
 Phi=[0 pi/4 0 pi/4 0 pi/2 -pi/4 0 -pi/4 pi/2 0]; % First Euler angle
@@ -16,9 +17,9 @@ nPlies = size(NomMat,2);         	% Number of plies
 H=[ones(nPlies-1,1)*h; 0.127e-3] ;  % vector of ply thicknesses
 
 %% CALCULATE THE DISPERSION CURVES
-DispersionCurves(NomMat,[Phi;Theta;Psi],H,psip,df,nFreqs,legDeg,nModes2Track)
+DispersionCurves(NomMat,[Phi;Theta;Psi],H,psip,df,nFreqs,legDeg,nModes2Track,saveOn)
 
 %% CALCULATE THE DISPLACEMENT PROFILE FOR GIVEN MODE AND FREQUENCY
 freq=150e3;
-nMode=2;
+nMode=3;
 DisplacementProfiles(NomMat,[Phi;Theta;Psi],H,psip,freq,nMode,legDeg)
