@@ -1,4 +1,5 @@
-function DispersionCurves(NomMat,EulerAngles,H,psip,df,nFreqs,legDeg,nModes2Track,varargin)
+function [Freq,Wavenumber,Velocity]=DispersionCurves(NomMat,EulerAngles,H,...
+    psip,df,nFreqs,legDeg,nModes2Track,varargin)
 % Calculates the dispersion curves for layered anisotropic materials using
 % the Legendre and Laguerre polynomial approach
 % Originally supplied by O. Bou-Matar, Lille
@@ -16,16 +17,17 @@ function DispersionCurves(NomMat,EulerAngles,H,psip,df,nFreqs,legDeg,nModes2Trac
 % nModes2Track  - Number of modes to be tracked
 % OPTIONAL:
 %   saveOn      - Enable saving of the dispersion data
+%   figOn       - Enable plotting
 
 %% INPUT PARSING
 numvarargs = length(varargin);
-if numvarargs > 1
+if numvarargs > 2
     error('myfuns:somefun2Alt:TooManyInputs', ...
-        'requires at most 1 optional inputs');
+        'requires at most 2 optional inputs');
 end
-optargs = {0};
+optargs = {0,0};
 optargs(1:numvarargs) = varargin;
-[saveOn] = optargs{:};
+[saveOn,figOn] = optargs{:};
 
 %% PREPARE THE OTHER PARAMETERS
 folder='G:\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
@@ -45,8 +47,8 @@ k = zeros(nMax,nFreqs);
 Un = zeros(nNodes,nMax,nFreqs);
 
 %% PREPARE PARTIAL MATRICES
-freq=nan(nFreqs,1);     % Initialize the frequency vector
-rho0=nan(nPlies,1);     % Density vector
+Freq=nan(nFreqs,1);     % Initialize the frequency vector
+Rho0=nan(nPlies,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
 F22=nan(size(F11));
@@ -64,7 +66,7 @@ for ply = 1:nPlies
     Matp = LoadElasticConstants(fullfile(folder,strcat(NomMat{ply},'.dat')));
     C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
     C = C./Ca;                  % normalization of stiffness tensor 
-    rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
+    Rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
     F11(1,1) = C(1,1);          % F11 matrix component for building Stroh matrix
     F11(1,2) = C(1,6);
     F11(1,3) = C(1,5);
@@ -133,15 +135,15 @@ for ply = 1:nPlies
     BB(:,:,ply) = (F13+F31)*cos(psip)+(F23+F32)*sin(psip);
     CC(:,:,ply) = -F33(:,:,ply);
     ABC(:,:,ply) = F31*cos(psip)+F32*sin(psip);
-    A2(:,:,ply) = -rho0(ply)*eye(3);
+    A2(:,:,ply) = -Rho0(ply)*eye(3);
 end
 
 %% CALCULATION LOOP
 tic;
-parfor_progress(nFreqs);
-parfor kk=0:nFreqs-1
+% parfor_progress(nFreqs);
+for kk=0:nFreqs-1
     w = dw+dw*kk;
-    freq(kk+1) = w/(2*pi);
+    Freq(kk+1) = w/(2*pi);
     ka = w*sqrt(rhoa/Ca);
     F1 = zeros(nNodes,nNodes);
     G1 = zeros(nNodes,nNodes);
@@ -255,49 +257,51 @@ parfor kk=0:nFreqs-1
     [interm, Ind] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
     Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
-    parfor_progress;
+%     parfor_progress;
 end
-parfor_progress(0);
+% parfor_progress(0);
 toc;
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);
 Wavenumber(Wavenumber>2000)=nan;      % Delete the insanely high wavenumbers
 Wavenumber=Wavenumber(1:2:end,:);     % two subsequent modes are duplicates, so take just one of them
-Wavenumber=DispersionCurveSorting(freq,Wavenumber,nModes2Track);
+Wavenumber=DispersionCurveSorting(Freq,Wavenumber,nModes2Track);
 
 %% CALCULATE THE VELOCITY
 Velocity=nan(size(Wavenumber));
 for mode=1:size(Wavenumber,1)
-    Velocity(mode,:)=freq'./squeeze(Wavenumber(mode,:));
+    Velocity(mode,:)=Freq'./squeeze(Wavenumber(mode,:));
 end 
 
 %% VISUALIZATION
-fUnits='f';
-switch fUnits
-    case 'f'
-        freq=freq*1e-3; % frequency in kHz
-        xLab='Frequency [kHz]';
-    case 'fd'
-        freq=freq*sum(H)*1e-3;   % frequency-thickness product in MHz*mm
-        xLab='Frequency-thickness [MHz \cdot mm]';
+if figOn == 1
+    fUnits='f';
+    switch fUnits
+        case 'f'
+            Freq=Freq*1e-3; % frequency in kHz
+            xLab='Frequency [kHz]';
+        case 'fd'
+            Freq=Freq*sum(H)*1e-3;   % frequency-thickness product in MHz*mm
+            xLab='Frequency-thickness [MHz \cdot mm]';
+    end
+
+    figure
+    subplot(2,1,1)
+    plot(Freq,Wavenumber,'*')
+    xlim([Freq(1),Freq(end)])
+    ylim([0,700]);
+    xlabel(xLab,'FontSize',14)
+    ylabel(strcat('Wavenumber [m^{-1}]'),'FontSize',14)
+
+    subplot(2,1,2)
+    hold on
+    plot(Freq,Velocity,'*')
+    xlim([Freq(1) Freq(end)])
+    ylim([0 1e4]);
+    xlabel(xLab,'FontSize',14)
+    ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)
 end
-
-figure
-subplot(2,1,1)
-plot(freq,Wavenumber,'*')
-xlim([freq(1),freq(end)])
-ylim([0,700]);
-xlabel(xLab,'FontSize',14)
-ylabel(strcat('Wavenumber [m^{-1}]'),'FontSize',14)
-
-subplot(2,1,2)
-hold on
-plot(freq,Velocity,'*')
-xlim([freq(1) freq(end)])
-ylim([0 1e4]);
-xlabel(xLab,'FontSize',14)
-ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)
 
 %% SAVING
 if saveOn == 1

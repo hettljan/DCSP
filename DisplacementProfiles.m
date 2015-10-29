@@ -14,6 +14,7 @@ function DisplacementProfiles(NomMat,EulerAngles,H,psip,freq,nMode,legDeg)
 % legDeg        - Degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
              
 %% COMPUTATIONAL PARAMETERS
+folder='G:\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
 Phi=EulerAngles(1,:);
 Theta=EulerAngles(2,:);
 Psi=EulerAngles(3,:);
@@ -57,7 +58,7 @@ H1 = zeros(nTot,nTot);
 
 %% LOAD THE MATERIAL PROPERTIES
 for ply = 1:nPlies
-    Matp = LoadElasticConstants(fullfile('./Materials',strcat(NomMat{ply},'.dat')));
+    Matp = LoadElasticConstants(fullfile(folder,strcat(NomMat{ply},'.dat')));
     C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
     C = C./Ca;                  % normalization of stiffness tensor 
     rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
