@@ -11,7 +11,7 @@ function SortedWvns=DispersionCurveSorting(Freq,Wavenumbers,nModes,varargin)
 % OUTPUT:
 %   SortedWvns  -   Matrix of sorted modes ordered row-wise
 
-fprintf('\n### STARTING DISPERSION CURVES SORTING PROGRAM ###\n\n');
+% fprintf('\n### STARTING DISPERSION CURVES SORTING PROGRAM ###\n\n');
 
 %% INPUT PARSING
 numvarargs = length(varargin);

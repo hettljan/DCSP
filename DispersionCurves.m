@@ -30,7 +30,7 @@ optargs(1:numvarargs) = varargin;
 [saveOn,figOn] = optargs{:};
 
 %% PREPARE THE OTHER PARAMETERS
-folder='G:\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
+folder='\\plato.kulak.be\groupdata\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
 Phi=EulerAngles(1,:);
 Theta=EulerAngles(2,:);
 Psi=EulerAngles(3,:);
@@ -139,8 +139,7 @@ for ply = 1:nPlies
 end
 
 %% CALCULATION LOOP
-tic;
-% parfor_progress(nFreqs);
+parfor_progress(nFreqs);
 for kk=0:nFreqs-1
     w = dw+dw*kk;
     Freq(kk+1) = w/(2*pi);
@@ -241,7 +240,7 @@ for kk=0:nFreqs-1
         if (K(ply,ply) == 0)
             kp(ply) = NaN;
         else
-            kp(ply) = i/K(ply,ply)*ka;
+            kp(ply) = 1i/K(ply,ply)*ka;
         end
     end
     for ply=1:2*nNodes
@@ -257,10 +256,9 @@ for kk=0:nFreqs-1
     [interm, Ind] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
     Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
-%     parfor_progress;
+    parfor_progress;
 end
-% parfor_progress(0);
-toc;
+parfor_progress(0);
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);
@@ -305,5 +303,5 @@ end
 
 %% SAVING
 if saveOn == 1
-    save 'DispData' 'freq' 'Wavenumber' 'Velocity' 
+    save 'DispData' 'Freq' 'Wavenumber' 'Velocity' 
 end
