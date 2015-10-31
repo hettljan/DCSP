@@ -1,14 +1,12 @@
-function [Freq,Wavenumber,Velocity]=DispersionCurves(NomMat,EulerAngles,H,...
-    psip,df,nFreqs,legDeg,nModes2Track,varargin)
+function [Freq,Wavenumber,Velocity]=DispersionCurves(Sample,psip,df,nFreqs,...
+    legDeg,nModes2Track,varargin)
 % Calculates the dispersion curves for layered anisotropic materials using
 % the Legendre and Laguerre polynomial approach
 % Originally supplied by O. Bou-Matar, Lille
 %
 % INPUT: 
-% NomMat        - Cell array with names of materials (link to text files .dat)
-% EulerAngles   - 1st, 2nd, 3rd Euler angle in [3xnPlies] matrix, phi is in first
-%                 row, theta in 2nd row, psi in 3rd row, all in [rad]
-% H             - Vector with ply/layer thicknesses [m]
+% Sample        - Object with description of the layering and layer
+%                 properties, see Sample.mat and Layer.mat for details 
 % psip          - Angle of wave propagation with respect to the main
 %                 in-plane coordinate axis [rad]
 % df            - Frequency step in [Hz]
@@ -30,12 +28,8 @@ optargs(1:numvarargs) = varargin;
 [saveOn,figOn] = optargs{:};
 
 %% PREPARE THE OTHER PARAMETERS
-folder='\\plato.kulak.be\groupdata\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
-Phi=EulerAngles(1,:);
-Theta=EulerAngles(2,:);
-Psi=EulerAngles(3,:);
-nPlies = size(NomMat,2);        % Number of plies
-Nodes=ones(nPlies,1)*legDeg;    % vector with the number of nodes/order of polynomial expansion  per layer 
+nLayers=Sample.nLayers;         % total number of layers in the sample
+Nodes=ones(nLayers,1)*legDeg;   % vector with the number of nodes/order of polynomial expansion  per layer 
 nNodes=3*sum(Nodes);            % total number of nodes in laminate x 3 components of displacement
 nMax=3*sum(Nodes);              % max number of modes????   
 
@@ -44,29 +38,27 @@ Ca = 1e11;                      % Pa = N/m^2 normalization parameter
 rhoa = 1e3;                     % kg/m^3 second normalization parameter 
 dw = 2*pi*df;                   % Angular frequency step
 k = zeros(nMax,nFreqs);
-Un = zeros(nNodes,nMax,nFreqs);
 
 %% PREPARE PARTIAL MATRICES
 Freq=nan(nFreqs,1);     % Initialize the frequency vector
-Rho0=nan(nPlies,1);     % Density vector
+Rho0=nan(nLayers,1);     % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
 F22=nan(size(F11));
-F33=nan(3,3,nPlies);
+F33=nan(3,3,nLayers);
 F31=nan(size(F11));
 F32=nan(size(F11));
-A1=nan(3,3,nPlies);
-BB=nan(3,3,nPlies);
-CC=nan(3,3,nPlies);
-ABC=nan(3,3,nPlies);
-A2=nan(3,3,nPlies);
+A1=nan(3,3,nLayers);
+BB=nan(3,3,nLayers);
+CC=nan(3,3,nLayers);
+ABC=nan(3,3,nLayers);
+A2=nan(3,3,nLayers);
 
 %% LOAD AND STACK THE MATERIAL PROPERTIES FOR PLIES AND STROH MATRIX
-for ply = 1:nPlies
-    Matp = LoadElasticConstants(fullfile(folder,strcat(NomMat{ply},'.dat')));
-    C = RotateElasticConstants(Matp.C,Phi(ply),Theta(ply),Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
+for ply = 1:nLayers
+    C = RotateElasticConstants(Sample.C(:,:,ply),Sample.Phi(ply),Sample.Theta(ply),Sample.Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
     C = C./Ca;                  % normalization of stiffness tensor 
-    Rho0(ply) = Matp.rho/rhoa;  % convert kg/m^3 to g/cm^3
+    Rho0(ply) = Sample.Rho(ply)/rhoa;  % convert kg/m^3 to g/cm^3
     F11(1,1) = C(1,1);          % F11 matrix component for building Stroh matrix
     F11(1,2) = C(1,6);
     F11(1,3) = C(1,5);
@@ -140,7 +132,7 @@ end
 
 %% CALCULATION LOOP
 parfor_progress(nFreqs);
-for kk=0:nFreqs-1
+parfor kk=0:nFreqs-1
     w = dw+dw*kk;
     Freq(kk+1) = w/(2*pi);
     ka = w*sqrt(rhoa/Ca);
@@ -148,14 +140,14 @@ for kk=0:nFreqs-1
     G1 = zeros(nNodes,nNodes);
     H1 = zeros(nNodes,nNodes);
     Ntemp = 1;
-    for ply = 1:nPlies      % Preparation of the computational values from Legendre polynomials
+    for ply = 1:nLayers      % Preparation of the computational values from Legendre polynomials
         As = zeros(3*(Nodes(ply)-2),3*Nodes(ply));
         Bs = zeros(3*(Nodes(ply)-2),3*Nodes(ply));
         Cs = zeros(3*(Nodes(ply)-2),3*Nodes(ply));
         for mm=0:Nodes(ply)-3
             for nn=0:Nodes(ply)-1
-                Bs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2/H(ply)*BB(:,:,ply)/ka*PmdPn(mm,nn); 
-                Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 4/(H(ply)^2)*CC(:,:,ply)/ka^2*Pmd2Pn(mm,nn);
+                Bs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2/Sample.H(ply)*BB(:,:,ply)/ka*PmdPn(mm,nn); 
+                Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 4/(Sample.H(ply)^2)*CC(:,:,ply)/ka^2*Pmd2Pn(mm,nn);
                 if (mm == nn)
                     As(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = 2*A1(:,:,ply)/(2*nn+1);
                     Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1)) = Cs(3*mm+1:3*(mm+1),3*nn+1:3*(nn+1))+2*A2(:,:,ply)/(2*nn+1);
@@ -169,7 +161,7 @@ for kk=0:nFreqs-1
     end
 
     % Conditions of continuity between plies - ply and ply+1
-    for ply = 1:nPlies-1
+    for ply = 1:nLayers-1
         % Continuity of displacement on the interface - ply and ply+1
         Ds = zeros(3,3*Nodes(ply+1));
         Es = zeros(3,3*Nodes(ply));
@@ -193,11 +185,11 @@ for kk=0:nFreqs-1
         Ep = zeros(3,3*Nodes(ply+1));
         for nn=0:Nodes(ply)-1
             Ds(:,3*nn+1:3*(nn+1)) = -ABC(:,:,ply);
-            Es(:,3*nn+1:3*(nn+1)) = 2/H(ply)*F33(:,:,ply)/ka*nn*(nn+1)/2;
+            Es(:,3*nn+1:3*(nn+1)) = 2/Sample.H(ply)*F33(:,:,ply)/ka*nn*(nn+1)/2;
         end
         for nn=0:Nodes(ply+1)-1
             Dp(:,3*nn+1:3*(nn+1)) = ABC(:,:,ply+1)*(-1)^nn;
-            Ep(:,3*nn+1:3*(nn+1)) = -2/H(ply+1)*F33(:,:,ply+1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
+            Ep(:,3*nn+1:3*(nn+1)) = -2/Sample.H(ply+1)*F33(:,:,ply+1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
         end
         F1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply-1))+1:3*sum(Nodes(1:ply))) = Ds;
         F1(Ntemp:Ntemp+2,3*sum(Nodes(1:ply))+1:3*sum(Nodes(1:ply+1))) = Dp;
@@ -212,7 +204,7 @@ for kk=0:nFreqs-1
     Es = zeros(3,3*Nodes(1));
     for nn=0:Nodes(1)-1
         Ds(:,3*nn+1:3*(nn+1)) = ABC(:,:,1)*(-1)^nn;
-        Es(:,3*nn+1:3*(nn+1)) = -2/H(1)*F33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
+        Es(:,3*nn+1:3*(nn+1)) = -2/Sample.H(1)*F33(:,:,1)/ka*(-1)^(nn+1)*nn*(nn+1)/2;
     end
     F1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Ds;
     G1(Ntemp:Ntemp+2,1:3*Nodes(1)) = Es;        
@@ -220,19 +212,19 @@ for kk=0:nFreqs-1
     Ntemp = Ntemp+3;
 
     % Boundary conditions at the upper interface
-    Dp = zeros(3,3*Nodes(nPlies));
-    Ep = zeros(3,3*Nodes(nPlies));
-    for nn=0:Nodes(nPlies)-1
-        Dp(:,3*nn+1:3*(nn+1)) = -ABC(:,:,nPlies);
-        Ep(:,3*nn+1:3*(nn+1)) = 2/H(nPlies)*F33(:,:,nPlies)/ka*nn*(nn+1)/2;
+    Dp = zeros(3,3*Nodes(nLayers));
+    Ep = zeros(3,3*Nodes(nLayers));
+    for nn=0:Nodes(nLayers)-1
+        Dp(:,3*nn+1:3*(nn+1)) = -ABC(:,:,nLayers);
+        Ep(:,3*nn+1:3*(nn+1)) = 2/Sample.H(nLayers)*F33(:,:,nLayers)/ka*nn*(nn+1)/2;
     end
-    F1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Dp;
-    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:nPlies-1))+1:3*sum(Nodes(1:nPlies))) = Ep;
+    F1(Ntemp:Ntemp+2,3*sum(Nodes(1:nLayers-1))+1:3*sum(Nodes(1:nLayers))) = Dp;
+    G1(Ntemp:Ntemp+2,3*sum(Nodes(1:nLayers-1))+1:3*sum(Nodes(1:nLayers))) = Ep;
 
     % Calculation of the eigenvalue problem
     M1 = [F1 -eye(nNodes);-H1 zeros(nNodes)];
     M2 = [G1 zeros(nNodes);zeros(nNodes) eye(nNodes)];
-    [Z1,K] = eig(M1,M2);        % bottleneck, calculates the mode shapes and "wavenumbers"
+    [~,K] = eig(M1,M2);        % bottleneck, calculates the mode shapes and "wavenumbers"
     kp = zeros(2*nNodes,1);
     
     % clean-up the unreasonable wavenumbers
@@ -253,9 +245,8 @@ for kk=0:nFreqs-1
         end
     end
 
-    [interm, Ind] = sort(kp);
+    [interm, ~] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
-    Un(:,:,kk+1) = Z1(1:nNodes,Ind(1:nMax));
     parfor_progress;
 end
 parfor_progress(0);
@@ -280,7 +271,7 @@ if figOn == 1
             Freq=Freq*1e-3; % frequency in kHz
             xLab='Frequency [kHz]';
         case 'fd'
-            Freq=Freq*sum(H)*1e-3;   % frequency-thickness product in MHz*mm
+            Freq=Freq*Sample.hTot*1e-3;   % frequency-thickness product in MHz*mm
             xLab='Frequency-thickness [MHz \cdot mm]';
     end
 
@@ -288,7 +279,7 @@ if figOn == 1
     subplot(2,1,1)
     plot(Freq,Wavenumber,'*')
     xlim([Freq(1),Freq(end)])
-    ylim([0,700]);
+    ylim([0,500]);
     xlabel(xLab,'FontSize',14)
     ylabel(strcat('Wavenumber [m^{-1}]'),'FontSize',14)
 
