@@ -35,24 +35,32 @@ classdef Sample
             smp.hTot=sum(smp.H); 
         end
         function plotLayers(smp)
-            figure
-            z=0;
+            figure('units','normalized','outerposition',[0 0 1/3 1]) 
+            h1=subplot(2,1,1);
             hold on
-            LayerCols = containers.Map(smp.Layers{1}.Material,'b'); % constructs an empty Map container for storing colors
-            Colors=['r';'g';'m';'c';'y'];     % vector with cute colors
-            colInd=1;                           % index of the Colors vector 
-            for i=1:smp.nLayers
-                if LayerCols.isKey(smp.Layers{i}.Material)~=1
-                    LayerCols(smp.Layers{i}.Material)=Colors(colInd);
-                    colInd=colInd+1;
-                end
-                rectangle('Position',[0,z,1,smp.H(i)*1e3],'FaceColor',LayerCols(smp.Layers{i}.Material));
-                text(0.425,z+smp.H(i)/2*1e3,smp.Layers{i}.Material)
-                z=z+smp.H(i)*1e3;
-            end
             ylim([0 smp.hTot]*1e3);
             ylabel('z [mm]')
+            h2=subplot(2,1,2);
+            hold on
+            LayerCols = containers.Map(smp.LayerNames{1},'b'); % constructs an empty Map container for storing colors
+            Colors=['r';'g';'m';'c';'y'];     % vector with cute colors
+            z=0;
+            colInd=1;                           % index of the Colors vector 
+            for i=1:smp.nLayers
+                if LayerCols.isKey(smp.LayerNames{i})~=1
+                    LayerCols(smp.LayerNames{i})=Colors(colInd);
+                    colInd=colInd+1;
+                end
+                axes(h1)
+                rectangle('Position',[0,z,1,smp.H(i)*1e3],'FaceColor',LayerCols(smp.LayerNames{i}));
+                text(0.425,z+smp.H(i)/2*1e3,smp.LayerNames{i})
+                quiver3(h2,0,0,z,cos(smp.Phi(i)),sin(smp.Phi(i)),0,LayerCols(smp.LayerNames{i}),'LineWidth',2)
+                z=z+smp.H(i)*1e3;
             end
+            axes(h2)
+            legend(smp.LayerNames)
+            view([50 50])
+        end          
     end
     
 end
