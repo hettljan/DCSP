@@ -13,7 +13,7 @@ classdef Sample
         
     end
     methods
-        function smp = Sample(layers)
+        function smp = Sample(layers)   % class constructor, the input is a cell containing layers
             smp.Layers=layers;
             smp.nLayers=length(layers);
             smp.H=nan(length(layers),1);
@@ -34,5 +34,25 @@ classdef Sample
             end
             smp.hTot=sum(smp.H); 
         end
+        function plotLayers(smp)
+            figure
+            z=0;
+            hold on
+            LayerCols = containers.Map(smp.Layers{1}.Material,'b'); % constructs an empty Map container for storing colors
+            Colors=['r';'g';'m';'c';'y'];     % vector with cute colors
+            colInd=1;                           % index of the Colors vector 
+            for i=1:smp.nLayers
+                if LayerCols.isKey(smp.Layers{i}.Material)~=1
+                    LayerCols(smp.Layers{i}.Material)=Colors(colInd);
+                    colInd=colInd+1;
+                end
+                rectangle('Position',[0,z,1,smp.H(i)*1e3],'FaceColor',LayerCols(smp.Layers{i}.Material));
+                text(0.425,z+smp.H(i)/2*1e3,smp.Layers{i}.Material)
+                z=z+smp.H(i)*1e3;
+            end
+            ylim([0 smp.hTot]*1e3);
+            ylabel('z [mm]')
+            end
     end
+    
 end
