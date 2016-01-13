@@ -3,7 +3,7 @@ function SortedWvns=DispersionCurveSorting(Freq,Wavenumbers,nModes,varargin)
 % LambAnisotropic3DLegendre.m. The output is the sorted matrix in which
 % each row correspond to one mode
 % INPUT:
-%   Freq        -   Frequency vector in [Hz]
+%   Freq        -   Frequency vector in [Hz], column-wise
 %   Wavenumbers -   Matrix with dispersion curves ordered row wise
 %   nModes      -   Number of modes to be tracked
 % OTPIONAL:
@@ -34,7 +34,7 @@ for idx=1:nModes;
             y2=Wavenumbers(idx:end,i+1);        % real available wavenumbers
             y2=y2(isnan(y2)==0);                % real available non-nan wavenumbers
             Diff=abs(y2-y2t);                   % calculate the absolute difference
-            [~,minIdx]=min(Diff);               % select the minimum difference between extrpolated and real
+            [~,minIdx]=min(Diff);               % select the minimum difference between extrapolated and real
             minIdx=minIdx+idx-1;
             if minIdx ~= idx
                 Wavenumbers([idx minIdx],i+1)=Wavenumbers([minIdx idx],i+1);    % flip the values

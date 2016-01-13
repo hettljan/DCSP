@@ -16,16 +16,17 @@ function [Freq,Wavenumber,Velocity]=DispersionCurves(Sample,psip,df,nFreqs,...
 % OPTIONAL:
 %   saveOn      - Enable saving of the dispersion data
 %   figOn       - Enable plotting
+%   parOn       - switch on and off the paralell computing
 
 %% INPUT PARSING
 numvarargs = length(varargin);
-if numvarargs > 2
+if numvarargs > 3
     error('myfuns:somefun2Alt:TooManyInputs', ...
-        'requires at most 2 optional inputs');
+        'requires at most 3 optional inputs');
 end
-optargs = {0,0};
+optargs = {0,0,0};
 optargs(1:numvarargs) = varargin;
-[saveOn,figOn] = optargs{:};
+[saveOn,figOn,parOn] = optargs{:};
 
 %% PREPARE THE OTHER PARAMETERS
 nLayers=Sample.nLayers;         % total number of layers in the sample
@@ -131,8 +132,13 @@ for ply = 1:nLayers
 end
 
 %% CALCULATION LOOP
-parfor_progress(nFreqs);
-parfor kk=0:nFreqs-1
+if parOn == 1
+  parforArg = 4;
+  parfor_progress(nFreqs);
+else
+  parforArg = 0;
+end
+parfor (kk=0:nFreqs-1,parforArg)
     w = dw+dw*kk;
     Freq(kk+1) = w/(2*pi);
     ka = w*sqrt(rhoa/Ca);
@@ -247,9 +253,13 @@ parfor kk=0:nFreqs-1
 
     [interm, ~] = sort(kp);
     k(:,kk+1) = interm(1:nMax);
-    parfor_progress;
+    if parOn ==1
+        parfor_progress;
+    end    
 end
-parfor_progress(0);
+if parOn ==1
+    parfor_progress(0);
+end
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);

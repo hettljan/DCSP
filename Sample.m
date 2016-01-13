@@ -60,7 +60,7 @@ classdef Sample
             axes(h2)
             legend(smp.LayerNames)
             view([50 50])
-        end          
+        end       % this function plots the layering and layer orientation in 2 subplots   
     end
     
 end

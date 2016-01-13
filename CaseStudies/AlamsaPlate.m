@@ -19,16 +19,16 @@ Layers{12}=Layer('Alamsa',0,0,0,0.23e-3);
 AlamsaPlt=Sample(Layers);  % create the object representing plate
 
 %% DEFINE OTHER PARAMETERS
-psip = 0;          % angle of wave propagation with respect to the main in-plane coordinate axis 
-nFreqs = 120;       % number of frequency steps
-df=5e3;           % frequency step size [Hz]
-legDeg=10;         % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
-nModes2Track=10;   % number of modes to be tracked
+psip = pi/4;        % angle [rad] of wave propagation with respect to the main in-plane coordinate axis 
+nFreqs = 150;       % number of frequency steps
+df=2e3;             % frequency step size [Hz]
+legDeg=10;          % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+nModes2Track=5;     % number of modes to be tracked
 saveOn=1;
 figOn=1;         
 
 %% CALCULATE THE DISPERSION CURVES
-[~,~,~]=DispersionCurves(AlamsaPlt,psip,df,nFreqs,legDeg,nModes2Track,saveOn,figOn);
+[~,~,~]=DispersionCurves(AlamsaPlt,psip,df,nFreqs,legDeg,nModes2Track,saveOn,figOn,1);
 
 %% CALCULATE THE DISPLACEMENT PROFILE FOR GIVEN MODE AND FREQUENCY
 % freq=150e3;
