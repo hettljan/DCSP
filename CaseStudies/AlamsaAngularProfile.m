@@ -18,7 +18,7 @@ Layers{12}=Layer('Alamsa',0,0,0,0.23e-3);
 AlamsaPlt=Sample(Layers);  % create the object representing plate
 
 %% DEFINE THE OTHER PARAMETERS
-Psip=linspace(-pi,pi,180)'; % propagation angle from -pi to pi (360 degrees)
+Psip=linspace(-pi,pi,360)'; % propagation angle from -pi to pi (360 degrees)
 nFreqs = 1;                 % number of frequency steps
 df=283e3;                   % frequency step size [Hz]
 legDeg=10;                  % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg

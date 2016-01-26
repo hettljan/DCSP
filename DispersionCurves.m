@@ -1,22 +1,27 @@
-function [Freq,Wavenumber,Velocity]=DispersionCurves(Sample,psip,df,nFreqs,...
+function [Freq,Wavenumber,PhaseVelocity]=DispersionCurves(Sample,propAngle,df,nFreqs,...
     legDeg,nModes2Track,varargin)
 % Calculates the dispersion curves for layered anisotropic materials using
 % the Legendre and Laguerre polynomial approach
 % Originally supplied by O. Bou-Matar, Lille
 %
 % INPUT: 
-% Sample        - Object with description of the layering and layer
+%   Sample        - Object with description of the layering and layer
 %                 properties, see Sample.mat and Layer.mat for details 
-% psip          - Angle of wave propagation with respect to the main
+%   propAngle     - Angle of wave propagation with respect to the main
 %                 in-plane coordinate axis [rad]
-% df            - Frequency step in [Hz]
-% nFreqs        - Number of frequency steps
-% legDeg        - Degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
-% nModes2Track  - Number of modes to be tracked
+%   df            - Frequency step in [Hz]
+%   nFreqs        - Number of frequency steps
+%   legDeg        - Degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+%   nModes2Track  - Number of modes to be tracked
 % OPTIONAL:
 %   saveOn      - Enable saving of the dispersion data
 %   figOn       - Enable plotting
 %   parOn       - switch on and off the paralell computing
+% OUTPUT:
+%   Freq        - Frequency vector in [Hz]
+%   Wavenumber  - Matrix with wavenumbers corresponding to identified modes
+%                 [1/m]
+%   PhaseVelocity    - Matrix with phase velocities for identified modes in [m/s]
 
 %% INPUT PARSING
 numvarargs = length(varargin);
@@ -124,10 +129,10 @@ for ply = 1:nLayers
     F13 = F31';
     F23 = F32';
 
-    A1(:,:,ply) = F11*cos(psip)^2+(F12+F21)*cos(psip)*sin(psip)+F22*sin(psip)^2;
-    BB(:,:,ply) = (F13+F31)*cos(psip)+(F23+F32)*sin(psip);
+    A1(:,:,ply) = F11*cos(propAngle)^2+(F12+F21)*cos(propAngle)*sin(propAngle)+F22*sin(propAngle)^2;
+    BB(:,:,ply) = (F13+F31)*cos(propAngle)+(F23+F32)*sin(propAngle);
     CC(:,:,ply) = -F33(:,:,ply);
-    ABC(:,:,ply) = F31*cos(psip)+F32*sin(psip);
+    ABC(:,:,ply) = F31*cos(propAngle)+F32*sin(propAngle);
     A2(:,:,ply) = -Rho0(ply)*eye(3);
 end
 
@@ -268,41 +273,41 @@ Wavenumber=Wavenumber(1:2:end,:);     % two subsequent modes are duplicates, so 
 Wavenumber=DispersionCurveSorting(Freq,Wavenumber,nModes2Track);
 
 %% CALCULATE THE VELOCITY
-Velocity=nan(size(Wavenumber));
+PhaseVelocity=nan(size(Wavenumber));
 for mode=1:size(Wavenumber,1)
-    Velocity(mode,:)=Freq'./squeeze(Wavenumber(mode,:));
+    PhaseVelocity(mode,:)=Freq'./squeeze(Wavenumber(mode,:));
 end 
+
+%% SAVING
+if saveOn == 1
+    save 'DispData' 'Freq' 'Wavenumber' 'PhaseVelocity' 
+end
 
 %% VISUALIZATION
 if figOn == 1
     fUnits='f';
     switch fUnits
         case 'f'
-            Freq=Freq*1e-3; % frequency in kHz
+            FreqPlt=Freq*1e-3; % frequency in kHz
             xLab='Frequency [kHz]';
         case 'fd'
-            Freq=Freq*Sample.hTot*1e-3;   % frequency-thickness product in MHz*mm
+            FreqPlt=Freq*Sample.hTot*1e-3;   % frequency-thickness product in MHz*mm
             xLab='Frequency-thickness [MHz \cdot mm]';
     end
 
     figure
     subplot(2,1,1)
-    plot(Freq,Wavenumber,'*')
-    xlim([Freq(1),Freq(end)])
+    plot(FreqPlt,Wavenumber,'*')
+    xlim([FreqPlt(1),FreqPlt(end)])
     ylim([0,500]);
     xlabel(xLab,'FontSize',14)
     ylabel(strcat('Wavenumber [m^{-1}]'),'FontSize',14)
 
     subplot(2,1,2)
     hold on
-    plot(Freq,Velocity,'*')
-    xlim([Freq(1) Freq(end)])
+    plot(FreqPlt,PhaseVelocity,'*')
+    xlim([FreqPlt(1) FreqPlt(end)])
     ylim([0 1e4]);
     xlabel(xLab,'FontSize',14)
     ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)
-end
-
-%% SAVING
-if saveOn == 1
-    save 'DispData' 'Freq' 'Wavenumber' 'Velocity' 
 end

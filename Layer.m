@@ -2,7 +2,7 @@ classdef Layer
     properties
         Material  % string with the name of the material
         phi       % 1st Euler angle [rad]
-        theta     % second Euler angle [rad]
+        theta     % 2nd Euler angle [rad]
         psi       % 3rd Euler angle [rad]
         h         % layer thickness [m]
         C         % C matrix in Voigt notation
