@@ -238,6 +238,15 @@ parfor (kk=0:nFreqs-1,parforArg)
     [~,K] = eig(M1,M2);        % bottleneck, calculates the mode shapes and "wavenumbers"
     kp = zeros(2*nNodes,1);
     
+    % GPU version of the previous calculation of the eigenvalue problem.
+    % However it does not support the generalized eigenvalue problem yet,
+    % os it can't be used 
+%     M1 = gpuArray([F1 -eye(nNodes);-H1 zeros(nNodes)]);
+%     M2 = gpuArray([G1 zeros(nNodes);zeros(nNodes) eye(nNodes)]);
+%     [~,Kgpu] = eig(M1,M2);        % bottleneck, calculates the mode shapes and "wavenumbers"
+%     K=gather(Kgpu);
+%     kp = zeros(2*nNodes,1);
+    
     % clean-up the unreasonable wavenumbers
     for ply=1:2*nNodes
         if (K(ply,ply) == 0)

@@ -22,7 +22,7 @@ nLayers=size(GuigwData.layers,1);
 Layers=cell(1,nLayers);
 
 %% PARSING OF THE ORIGINAL DATA
-folder='\\plato.kulak.be\groupdata\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials\';
+folder='\\plato.kulak.be\groupdata\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
 for i=1:nLayers
   C=[GuigwData.C11(i),GuigwData.C12(i),GuigwData.C13(i),0,0,0;...
     GuigwData.C12(i),GuigwData.C22(i),GuigwData.C23(i),0,0,0;...
@@ -31,7 +31,7 @@ for i=1:nLayers
     0,0,0,0,GuigwData.C55(i),0;
     0,0,0,0,0,GuigwData.C66(i)];
   
-    fileName=fullfile(folder,'temp.dat');
+    fileName=fullfile(folder,strcat(GuigwData.layers{i},'.dat'));
     file=fopen(fileName,'w');
     fprintf(file,'$Density\n%d\n$EndDensity\n\n$LinearElasticConstants\n',GuigwData.rho(i));
     fclose(file);
@@ -40,7 +40,7 @@ for i=1:nLayers
     fprintf(file,'$EndLinearElasticConstants');
     fclose(file);
     
-    currLayer=Layer('temp',deg2rad(GuigwData.teta(i)),0,0,GuigwData.thick(i));        
+    currLayer=Layer(GuigwData.layers{i},deg2rad(GuigwData.teta(i)),0,0,GuigwData.thick(i));        
     Layers{i}=currLayer;
 end
 % delete(fileName)
