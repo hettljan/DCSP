@@ -305,18 +305,22 @@ if figOn == 1
     end
 
     figure
-    subplot(2,1,1)
-    plot(FreqPlt,Wavenumber,'*')
+    ax(1)=subplot(2,1,1);
+    plot(FreqPlt,Wavenumber,'*','MarkerSize',2);
+    p1=gca;
+    p1.TickLabelInterpreter='latex';
     xlim([FreqPlt(1),FreqPlt(end)])
     ylim([0,500]);
-    xlabel(xLab,'FontSize',14)
-    ylabel(strcat('Wavenumber [m^{-1}]'),'FontSize',14)
+    ylabel(strcat('Wavenumber [$$m^{-1}$$]'),'FontSize',10)
 
-    subplot(2,1,2)
+    ax(2)=subplot(2,1,2);
     hold on
-    plot(FreqPlt,PhaseVelocity,'*')
+    plot(FreqPlt,PhaseVelocity,'*','MarkerSize',2);
+    p2=gca;
+    p2.TickLabelInterpreter='latex';
     xlim([FreqPlt(1) FreqPlt(end)])
     ylim([0 1e4]);
-    xlabel(xLab,'FontSize',14)
-    ylabel(strcat('Phase velocity [ms^{-1}]'),'FontSize',14)
+    ylabel(strcat('Phase velocity [$$ms^{-1}$$]'),'FontSize',10)
+    xlabel(xLab,'FontSize',10);
+    linkaxes(ax(1:2),'x');
 end

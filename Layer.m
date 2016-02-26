@@ -9,15 +9,17 @@ classdef Layer
         rho       % material density in [kg/m^3]
     end
     methods
-        function lyr = Layer(material,phi,theta,psi,h)
-            lyr.Material=material;
+        function lyr = Layer(file,phi,theta,psi,h)
+            fullPath=GetFullPath(file);     % transforms the given path to abs path
+            [~,matName,~]=fileparts(fullPath);
+            lyr.Material=matName;
             lyr.phi=phi;
             lyr.theta=theta;
             lyr.psi=psi;
             lyr.h=h;
             % READ THE MASS DENSITY
-            folder='\\plato.kulak.be\groupdata\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
-            fid = fopen(fullfile(folder,strcat(material,'.dat')), 'rt');
+%             folder='\\plato.kulak.be\groupdata\acoustics\Jan_Hettler\MATLAB\Simulation\DCSP\Materials';
+            fid = fopen(fullPath, 'rt');
             myline = fgetl(fid);
             while ( ~strcmp(myline, '$Density') && ischar(myline) )
                 myline = fgetl(fid);
@@ -40,7 +42,7 @@ classdef Layer
                     fscanf(fid, '%s', row-1);                                  % Read the stars.
                     Cpom(row,row:end) = fscanf(fid, '%g', 6-row+1);      % Read the non-stars.
                 end
-                lyr.C=Cpom+triu(Cpom,1)';             % populate the stiffness tensor with symmetric values
+                lyr.C=Cpom+triu(Cpom,1)';   % populate the stiffness tensor with symmetric values
                 fgetl(fid);                 % dummy to get newline
                 myline = fgetl(fid);
                 if strcmp(myline, '$EndLinearElasticConstants')~=1

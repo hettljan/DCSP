@@ -26,7 +26,8 @@ saveOn=0;
 figOn=1;         
 
 %% CALCULATE THE DISPERSION CURVES
-[~,~,~]=DispersionCurves(SaristuPlt,psip,df,nFreqs,legDeg,nModes2Track,saveOn,figOn);
+[~,~,~]=DispersionCurves(SaristuPlt,psip,df,nFreqs,legDeg,nModes2Track,...
+    saveOn,figOn);
 
 %% CALCULATE THE DISPLACEMENT PROFILE FOR GIVEN MODE AND FREQUENCY
 % freq=50e3;
