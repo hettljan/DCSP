@@ -21,8 +21,8 @@ AlamsaPlt=Sample(Layers);  % create the object representing plate
 %% DEFINE THE OTHER PARAMETERS
 AngleRange=linspace(-pi,pi,360)'; % propagation angle from -pi to pi (360 degrees)
 freq=283e3;                 % frequency step size [Hz]
-legDeg=10;                  % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
-nModes2Track=5;             % number of modes to be tracked
+legDeg=5;                  % degree of Legendre polynomial expansion - determines the maximum number of modes 3/2*legDeg
+nModes2Track=6;             % number of modes to be tracked
 saveOn=0;
 figOn=1;
 

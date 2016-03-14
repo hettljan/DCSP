@@ -47,7 +47,7 @@ k = zeros(nMax,nFreqs);
 
 %% PREPARE PARTIAL MATRICES
 Freq=nan(nFreqs,1);     % Initialize the frequency vector
-Rho0=nan(nLayers,1);     % Density vector
+Rho0=nan(nLayers,1);    % Density vector
 F11=nan(3,3);
 F12=nan(size(F11));
 F22=nan(size(F11));
@@ -62,7 +62,8 @@ A2=nan(3,3,nLayers);
 
 %% LOAD AND STACK THE MATERIAL PROPERTIES FOR PLIES AND STROH MATRIX
 for ply = 1:nLayers
-    C = RotateElasticConstants(Sample.C(:,:,ply),Sample.Phi(ply),Sample.Theta(ply),Sample.Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
+    C = RotateElasticConstants(Sample.C(:,:,ply),Sample.Phi(ply),...
+        Sample.Theta(ply),Sample.Psi(ply)); % stiffness tensor rotated to principal axis (of anisotropy)
     C = C./Ca;                  % normalization of stiffness tensor 
     Rho0(ply) = Sample.Rho(ply)/rhoa;  % convert kg/m^3 to g/cm^3
     F11(1,1) = C(1,1);          % F11 matrix component for building Stroh matrix
@@ -277,7 +278,7 @@ end
 
 %% ADJUST THE UNITS
 Wavenumber = abs(real(k))./(2*pi);
-Wavenumber(Wavenumber>2000)=nan;      % Delete the insanely high wavenumbers
+Wavenumber(Wavenumber>2500)=nan;      % Delete the insanely high wavenumbers
 Wavenumber=Wavenumber(1:2:end,:);     % two subsequent modes are duplicates, so take just one of them
 Wavenumber=DispersionCurveSorting(Freq,Wavenumber,nModes2Track);
 

@@ -1,10 +1,16 @@
-E=5e9;      % Young's modulus in GPa
-mu=0.35;    % Poisson ratio    
+E=70.75e9;
+nu=0.34;
+rho=2700;
+v1=6320;
+v2=3130;
+fileName='Aluminum.dat';
 
-C=Eng2CmatrixIsotropic(E,mu);
-fileName='Plexiglass.dat';
+% convert E and nu to Cmatrix
+C=Eng2CmatrixIsotropic(E,nu);
+
+% save the Cmatrix to file
 file=fopen(fileName,'w');
-fprintf(file,'$Density\n1210\n$EndDensity\n\n$LinearElasticConstants\n');
+fprintf(file,'$Density\n%.2f\n$EndDensity\n\n$LinearElasticConstants\n',rho);
 fclose(file);
 dlmwrite(fileName,C,'delimiter','\t','-append','precision','%.4e')
 file=fopen(fileName,'a');

@@ -5,7 +5,7 @@
 clearvars
 
 %% LOAD DATA
-folder='C:\Users\u0088749\KULeuven\PROJECTS\ALAMSA\Results\DispersionCurves\IAI-REF-A';
+folder='C:\Users\u0088749\Box Sync\Projects\ALAMSA\Results\DispersionCurves\IAI-REF-A';
 GUIGWFileName='Guigw0-500kHz.mat';
 DCSPFileName='DCSP0-500kHz.mat';
 GUIGUWData=load(fullfile(folder,GUIGWFileName));
@@ -19,4 +19,3 @@ plot(DCSPData.Freq*1e3,DCSPData.Velocity,'-','Linewidth',2);
 ylim([1 8000])
 xlabel('Frequency [kHz]');
 ylabel('Phase Velocity [m/s]');
-
